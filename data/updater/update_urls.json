@@ -1,0 +1,6 @@
+{
+    "cve": "https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-{year}.json.zip",
+    "cwe": "https://cwe.mitre.org/data/xml/cwec_latest.xml.zip",
+    "capec": "https://capec.mitre.org/data/xml/capec_latest.xml",
+    "mitre_attack": "https://example.com/path-to-mitre-attack-data.xml"
+}

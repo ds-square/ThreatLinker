@@ -1,0 +1,582 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        width: 100%;
+        max-width: 500px; /* Imposta una dimensione massima uguale per tutti i grafici */
+        height: 400px;
+        margin: 0 auto; /* Centra ciascun grafico nel proprio contenitore */
+        box-sizing: border-box;
+    }
+    
+
+    .chart-row {
+        display: flex;
+        justify-content: center; /* Centra i grafici all'interno della riga */
+        gap: 20px; /* Spaziatura uniforme tra i grafici */
+        flex-wrap: wrap;
+    }
+    
+    
+    .chart-row .chart-container {
+        flex: 1;
+        min-width: 300px;
+        max-width: 600px;
+    }
+
+    
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Database</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Statistics</li>
+        </ol>
+    </nav>
+
+    <!-- Section Header Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="bi bi-bar-chart-line-fill text-primary" style="font-size: 2rem;"></i>
+                </div>
+                <div>
+                    <h2 class="card-title mb-1">CVE, CWE, and CAPEC Statistics Overview</h2>
+                    <p class="card-text text-muted">Explore up-to-date statistics on CVE, CWE, and CAPEC entries in the database for detailed insights into vulnerabilities and attack patterns.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CVE Statistics Section Title -->
+    <h5 class="mb-4 text-primary">CVE Statistics</h5>
+
+    <!-- Pie Chart with Extra Space Below -->
+    <div class="chart-container pie-chart">
+        <canvas id="cveRatingChart"></canvas>
+    </div>
+
+    <!-- Side-by-Side Line Charts -->
+    <div class="chart-row">
+        <!-- CVE per Year Chart -->
+        <div class="chart-container">
+            <canvas id="cvePerYearChart"></canvas>
+        </div>
+
+        <!-- CVE with CWE per Year Percentage Chart -->
+        <div class="chart-container">
+            <canvas id="cvePerYearPercentageChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-row">
+        <!-- Percentage of CVE per Year Chart -->
+        <div class="chart-container">
+            <canvas id="cveWithCwePerYearChart"></canvas>
+        </div>
+
+        <!-- CVE with CWE Percentage per Year Chart -->
+        <div class="chart-container">
+            <canvas id="cveWithCwePercentageChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Top 20 Most Frequent CWE Chart -->
+    <div class="chart-container">
+        <canvas id="top20CweChart"></canvas>
+    </div>
+
+    <h5 class="mb-4 text-primary">Top 20 Vendors and Products in CVE</h5>
+
+    <div class="chart-row">
+        <!-- Top 20 Vendors Chart -->
+        <div class="chart-container">
+            <canvas id="topVendorsChart"></canvas>
+        </div>
+        <!-- Top 20 Products Chart -->
+        <div class="chart-container">
+            <canvas id="topProductsChart"></canvas>
+        </div>
+    </div>
+
+    <!-- CAPEC Statistics Section Title -->
+    <h5 class="mb-4 text-primary">CAPEC Statistics</h5>
+
+    <!-- Chart: Total CAPECs -->
+
+    <div class="chart-row">
+        <!-- Chart: Total CAPECs -->
+        <div class="chart-container">
+            <canvas id="totalCapecChart"></canvas>
+        </div>
+        <!-- Chart: CAPEC with Execution Flow -->
+        <div class="chart-container">
+            <canvas id="capecWithExecutionFlowChart"></canvas>
+        </div>
+
+    </div>
+
+    <div class="chart-row">
+        <div class="chart-container">
+            <canvas id="attackStepsDistributionChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="phaseDistributionChart"></canvas>
+        </div>
+    </div>
+
+    <h5 class="mb-4 text-primary">CWE-CAPEC Link Statistics</h5>
+
+    <div class="chart-row">
+        <!-- Top 20 CAPEC Link Chart -->
+        <div class="chart-container">
+            <canvas id="topCapecLinksChart"></canvas>
+        </div>
+        <!-- CAPEC Link Distribution Chart -->
+        <div class="chart-container">
+            <canvas id="capecLinkDistributionChart"></canvas>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Converte i dati di Django in JSON utilizzabile -->
+{{ cve_stats|json_script:"cveStats" }}
+{{ cwe_stats|json_script:"cweStats" }}
+{{ capec_stats|json_script:"capecStats" }}
+
+<script>
+    // Carica i dati di Django come JSON in JavaScript
+    const cveStats = JSON.parse(document.getElementById('cveStats').textContent);
+    const cweStats = JSON.parse(document.getElementById('cweStats').textContent);
+    const capecStats = JSON.parse(document.getElementById('capecStats').textContent);
+
+    // Debug: verifica i dati nella console
+    console.log("CVE Stats:", cveStats);
+    console.log("CAPEC Stats:", capecStats);
+    
+    // Pie Chart: Percentage of CVE by Rating
+    const cveRatingLabels = Object.keys(cveStats.cve_rating_percentages);
+    const cveRatingValues = Object.values(cveStats.cve_rating_percentages);
+
+    new Chart(document.getElementById('cveRatingChart'), {
+        type: 'pie',
+        data: {
+            labels: cveRatingLabels,
+            datasets: [{
+                label: 'Percentage of CVE by Rating',
+                data: cveRatingValues,
+                backgroundColor: ['green', 'yellow', 'orange', 'red']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                title: { display: true, text: 'Distribution of CVE Ratings' }
+            }
+        }
+    });
+
+    // Line Chart: Number of CVE per Year
+    const cvePerYearLabels = Object.keys(cveStats.cve_per_year_counts);
+    const cvePerYearData = Object.values(cveStats.cve_per_year_counts);
+
+    new Chart(document.getElementById('cvePerYearChart'), {
+        type: 'line',
+        data: {
+            labels: cvePerYearLabels,
+            datasets: [{
+                label: 'Number of CVE per Year',
+                data: cvePerYearData,
+                fill: false,
+                borderColor: 'blue',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'Number of CVE per Year' }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Year' } },
+                y: { title: { display: true, text: 'Number of CVE' } }
+            }
+        }
+    });
+
+    // Line Chart: Number of CVE with CWE per Year
+    const cveWithCweLabels = Object.keys(cveStats.cves_with_cwe_per_year);
+    const cveWithCweCounts = cveWithCweLabels.map(year => cveStats.cves_with_cwe_per_year[year].count);
+
+    new Chart(document.getElementById('cveWithCwePerYearChart'), {
+        type: 'line',
+        data: {
+            labels: cveWithCweLabels,
+            datasets: [{
+                label: 'Number of CVE with CWE per Year',
+                data: cveWithCweCounts,
+                fill: false,
+                borderColor: 'purple',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'Number of CVE with CWE per Year' }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Year' } },
+                y: { title: { display: true, text: 'Number of CVE with CWE' } }
+            }
+        }
+    });
+
+    // Line Chart: Percentage of CVE by Year
+    const cvePerYearPercentageLabels = Object.keys(cveStats.cve_per_year_percentages);
+    const cvePerYearPercentageData = Object.values(cveStats.cve_per_year_percentages);
+
+    new Chart(document.getElementById('cvePerYearPercentageChart'), {
+        type: 'line',
+        data: {
+            labels: cvePerYearPercentageLabels,
+            datasets: [{
+                label: 'Percentage of CVE by Year',
+                data: cvePerYearPercentageData,
+                fill: false,
+                borderColor: 'orange',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'Percentage of CVE by Year' }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Year' } },
+                y: { title: { display: true, text: 'Percentage of CVE' } }
+            }
+        }
+    });
+
+    // Line Chart: Percentage of CVE with CWE per Year
+    const cveWithCwePercentageLabels = Object.keys(cveStats.cves_with_cwe_per_year);
+    const cveWithCwePercentages = cveWithCwePercentageLabels.map(year => cveStats.cves_with_cwe_per_year[year].percentage);
+
+    new Chart(document.getElementById('cveWithCwePercentageChart'), {
+        type: 'line',
+        data: {
+            labels: cveWithCwePercentageLabels,
+            datasets: [{
+                label: 'Percentage of CVE with CWE per Year',
+                data: cveWithCwePercentages,
+                fill: false,
+                borderColor: 'green',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'Percentage of CVE with CWE per Year' }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Year' } },
+                y: { title: { display: true, text: 'Percentage of CVE with CWE' }, ticks: { callback: (value) => `${value}%` } }
+            }
+        }
+    });
+
+    // Bar Chart for Top 20 Most Frequent CWE with Clickable Links
+    const top20CweLabels = cveStats.top_20_cwes_all_time.map(item => item[0]);
+    const top20CweCounts = cveStats.top_20_cwes_all_time.map(item => item[1]);
+
+    new Chart(document.getElementById('top20CweChart'), {
+        type: 'bar',
+        data: {
+            labels: top20CweLabels,
+            datasets: [{
+                label: 'Top 20 Most Frequent CWE',
+                data: top20CweCounts,
+                backgroundColor: 'teal'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'Top 20 Most Frequent CWE' }
+            },
+            scales: {
+                x: { title: { display: true, text: 'CWE ID' } },
+                y: { title: { display: true, text: 'Number of CVE' } }
+            },
+            onClick: (e, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const cweId = top20CweLabels[index];
+                    window.location.href = `/view/cwe/${cweId}`;
+                }
+            }
+        }
+    });
+
+    // Top 20 Vendors Chart
+    const topVendorsData = cveStats.top_20_vendors;
+    const vendorLabels = topVendorsData.map(item => item[0]); // Vendor names
+    const vendorCounts = topVendorsData.map(item => item[1]); // Counts
+
+    new Chart(document.getElementById('topVendorsChart'), {
+        type: 'bar',
+        data: {
+            labels: vendorLabels,
+            datasets: [{
+                label: 'Top 20 Vendors',
+                data: vendorCounts,
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'Top 20 Vendors in CVE' }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Vendors' } },
+                y: { title: { display: true, text: 'Occurrences' } }
+            }
+        }
+    });
+
+    // Top 20 Products Chart
+    const topProductsData = cveStats.top_20_products;
+    const productLabels = topProductsData.map(item => item[0]); // Product names
+    const productCounts = topProductsData.map(item => item[1]); // Counts
+
+    new Chart(document.getElementById('topProductsChart'), {
+        type: 'bar',
+        data: {
+            labels: productLabels,
+            datasets: [{
+                label: 'Top 20 Products',
+                data: productCounts,
+                backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'Top 20 Products in CVE' }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Products' } },
+                y: { title: { display: true, text: 'Occurrences' } }
+            }
+        }
+    });
+
+    // Other CVE charts go here...
+
+    // Esempio per il grafico CAPEC "Total CAPECs"
+    new Chart(document.getElementById('totalCapecChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ["Valid CAPECs", "Deprecated CAPECs"],
+            datasets: [{
+                label: 'CAPEC Status',
+                data: [capecStats.valid_capec_count, capecStats.deprecated_capec_count],
+                backgroundColor: ['#4CAF50', '#FFC107']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { title: { display: true, text: 'Total CAPECs' } }
+        }
+    });
+
+    // Chart: CAPEC with Execution Flow
+    const capecWithExecutionFlowData = {
+        labels: ["With Execution Flow", "Without Execution Flow"],
+        datasets: [{
+            label: "CAPEC Execution Flow",
+            data: [capecStats.capecs_with_execution_flow_count, capecStats.capecs_without_execution_flow_count],
+            backgroundColor: ['#2196F3', '#9E9E9E']
+        }]
+    };
+
+    new Chart(document.getElementById('capecWithExecutionFlowChart'), {
+        type: 'pie',
+        data: capecWithExecutionFlowData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'CAPECs with Execution Flow' }
+            }
+        }
+    });
+
+    // Chart: Phase Distribution of Attack Steps
+    const phaseDistributionLabels = Object.keys(capecStats.phase_distribution);
+    const phaseDistributionValues = phaseDistributionLabels.map(key => capecStats.phase_distribution[key].count);
+
+    new Chart(document.getElementById('phaseDistributionChart'), {
+        type: 'pie',
+        data: {
+            labels: phaseDistributionLabels,
+            datasets: [{
+                label: 'Distribution of Attack Steps Phases',
+                data: phaseDistributionValues,
+                backgroundColor: ['#673AB7', '#3F51B5', '#FF9800']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'Phase Distribution of Attack Steps' }
+            }
+        }
+    });
+
+    // Chart: Attack Steps Distribution
+    const attackStepsDistributionData = {{ capec_stats.attack_step_distribution|safe }};
+    const attackStepsLabels = Object.keys(attackStepsDistributionData);
+    const attackStepsCounts = attackStepsLabels.map(key => attackStepsDistributionData[key].count);
+    const attackStepsPercentages = attackStepsLabels.map(key => attackStepsDistributionData[key].percentage);
+
+    new Chart(document.getElementById('attackStepsDistributionChart'), {
+        type: 'bar',
+        data: {
+            labels: attackStepsLabels,
+            datasets: [
+                {
+                    label: 'Number of CAPECs by Attack Steps',
+                    data: attackStepsCounts,
+                    backgroundColor: '#FF5722'
+                },
+                {
+                    label: 'Percentage of CAPECs by Attack Steps',
+                    data: attackStepsPercentages,
+                    type: 'line',  // Secondary line chart for percentage
+                    borderColor: '#3E95CD',
+                    fill: false,
+                    yAxisID: 'percentage'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'Attack Steps Distribution' }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Number of Attack Steps' } },
+                y: {
+                    title: { display: true, text: 'Number of CAPECs' }
+                },
+                percentage: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'Percentage (%)' },
+                    ticks: { callback: (value) => `${value}%` }
+                }
+            }
+        }
+    });
+
+    // Top 20 CAPEC Link Chart
+    const capecLinkLabels = cweStats.top_20_capec_links.map(item => item[0]); // CAPEC IDs
+    const capecLinkCounts = cweStats.top_20_capec_links.map(item => item[1]); // Link counts
+
+    new Chart(document.getElementById('topCapecLinksChart'), {
+        type: 'bar',
+        data: {
+            labels: capecLinkLabels,
+            datasets: [{
+                label: 'Top 20 CAPEC Links',
+                data: capecLinkCounts,
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'Top 20 CAPEC Linked to CWE' }
+            },
+            scales: {
+                x: { title: { display: true, text: 'CAPEC IDs' } },
+                y: { title: { display: true, text: 'Number of Links' } }
+            },
+            onClick: (e, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const capecId = capecLinkLabels[index];
+                    window.location.href = `/view/capec/${capecId}`;
+                }
+            }
+        }
+    });
+
+    // CAPEC Link Distribution Chart
+    const capecDistributionLabels = Object.keys(cweStats.capec_link_distribution);
+    const capecDistributionCounts = Object.values(cweStats.capec_link_distribution);
+
+    new Chart(document.getElementById('capecLinkDistributionChart'), {
+        type: 'bar',
+        data: {
+            labels: capecDistributionLabels,
+            datasets: [{
+                label: 'CWE by CAPEC Link Count',
+                data: capecDistributionCounts,
+                backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'Distribution of CWE by Number of CAPEC Links' }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Number of CAPEC Links' } },
+                y: { title: { display: true, text: 'Number of CWE' } }
+            }
+        }
+    });
+    
+</script>
+{% endblock %}

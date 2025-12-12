@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Update Progress</h2>
+    <div id="progress-container">
+        {% for phase, entities in update_status.items %}
+            <h4>{{ phase|capfirst }}</h4>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Entity</th>
+                        <th>Status</th>
+                        <th>Progress</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entity, details in entities.items %}
+                    <tr>
+                        <td>{{ entity }}</td>
+                        <td>{{ details.status|capfirst }}</td>
+                        <td>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" style="width: {{ details.progress }}%;" aria-valuenow="{{ details.progress }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ details.progress }}%
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    // Aggiorna lo stato del progresso ogni 5 secondi
+    setInterval(function(){
+        fetch("{% url 'data:update_progress' %}")
+        .then(response => response.json())
+        .then(data => {
+            const progressContainer = document.getElementById("progress-container");
+            progressContainer.innerHTML = ''; // Svuota il contenitore per aggiornare
+            data.update_status.forEach((phase) => {
+                let phaseHtml = `<h4>${phase.name}</h4><table class="table table-bordered"><thead><tr><th>Entity</th><th>Status</th><th>Progress</th></tr></thead><tbody>`;
+                phase.entities.forEach((entity) => {
+                    phaseHtml += `<tr>
+                        <td>${entity.name}</td>
+                        <td>${entity.status}</td>
+                        <td><div class="progress">
+                            <div class="progress-bar" role="progressbar" style="width: ${entity.progress}%" aria-valuenow="${entity.progress}" aria-valuemin="0" aria-valuemax="100">
+                                ${entity.progress}%
+                            </div>
+                        </div></td>
+                    </tr>`;
+                });
+                phaseHtml += `</tbody></table>`;
+                progressContainer.insertAdjacentHTML('beforeend', phaseHtml);
+            });
+        });
+    }, 5000);
+</script>
+{% endblock %}

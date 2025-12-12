@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Database Status{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Database Status</h2>
+    <table class="table table-centered mb-0">
+        <thead class="table-dark">
+            <tr>
+                <th>Property</th>
+                <th>Details</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Database Name</td>
+                <td>{{ db_status.database_name }}</td>
+                <td>
+                    {% if db_status.is_connected %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-danger">Disconnected</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Database User</td>
+                <td>{{ db_status.database_user }}</td>
+                <td><span class="badge bg-info">Connected</span></td>
+            </tr>
+            <tr>
+                <td>Database Version</td>
+                <td>{{ db_status.database_version }}</td>
+                <td><span class="badge bg-warning">Compatible</span></td>
+            </tr>
+            <tr>
+                <td>Number of Tables</td>
+                <td>{{ db_status.table_count }}</td>
+                <td>
+                    {% if db_status.table_count != "N/A" %}
+                        <span class="badge bg-success">{{ db_status.table_count }} Tables</span>
+                    {% else %}
+                        <span class="badge bg-secondary">N/A</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Max Connections</td>
+                <td>{{ db_status.max_connections }}</td>
+                <td><span class="badge bg-primary">Sufficient</span></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}

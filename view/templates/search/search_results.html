@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="col-12 grid-margin stretch-card">
+    <div class="card">
+        <div class="card-body">
+            <h4 class="card-title">Search Results</h4>
+
+        <!-- Risultati per CVE -->
+        {% if entity == 'CVE' %}
+            {% if results %}
+                <h5>CVE Results</h5>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Description</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if results.id %}
+                            <tr>
+                                <td>{{ results.id }}</td>
+                                <td>{{ results.description|truncatewords:10 }}</td>
+                                <td>
+                                    <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#cveModal{{ results.id }}">
+                                        View Details
+                                    </button>
+                                </td>
+                            </tr>
+                            <!-- Modal per il singolo risultato -->
+                            <div class="modal fade" id="cveModal{{ results.id }}" tabindex="-1" aria-labelledby="cveModalLabel{{ results.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="cveModalLabel{{ results.id }}">Details for {{ results.id }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p><strong>Assigner:</strong> {{ results.assigner }}</p>
+                                            <p><strong>Description:</strong> {{ results.description }}</p>
+                                            {% if results.published_date %}
+                                                <p><strong>Published Date:</strong> {{ results.published_date }}</p>
+                                            {% endif %}
+                                            {% if results.last_modified_date %}
+                                                <p><strong>Last Modified Date:</strong> {{ results.last_modified_date }}</p>
+                                            {% endif %}
+                                            {% if results.vulnerable_cpe_uris %}
+                                                <p><strong>CPE URIs:</strong></p>
+                                                <ul>
+                                                    {% for cpe in results.vulnerable_cpe_uris %}
+                                                        <li>{{ cpe }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% endif %}
+                                            <div class="text-end">
+                                                <a href="/view/cve/{{ results.id }}" class="btn btn-primary" target="_blank">View Full Details</a>
+                                            </div>
+
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            {% for cve in results %}
+                                <tr>
+                                    <td>{{ cve.id }}</td>
+                                    <td>{{ cve.description|truncatewords:10 }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#cveModal{{ cve.id }}">
+                                            View Details
+                                        </button>
+                                    </td>
+                                </tr>
+                                <!-- Modal per i dettagli completi -->
+                                <div class="modal fade" id="cveModal{{ cve.id }}" tabindex="-1" aria-labelledby="cveModalLabel{{ cve.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="cveModalLabel{{ cve.id }}">Details for {{ cve.id }}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p><strong>Assigner:</strong> {{ cve.assigner }}</p>
+                                                <p><strong>Description:</strong> {{ cve.description }}</p>
+                                                {% if cve.published_date %}
+                                                    <p><strong>Published Date:</strong> {{ cve.published_date }}</p>
+                                                {% endif %}
+                                                {% if cve.last_modified_date %}
+                                                    <p><strong>Last Modified Date:</strong> {{ cve.last_modified_date }}</p>
+                                                {% endif %}
+                                                {% if cve.vulnerable_cpe_uris %}
+                                                    <p><strong>CPE URIs:</strong></p>
+                                                    <ul>
+                                                        {% for cpe in cve.vulnerable_cpe_uris %}
+                                                            <li>{{ cpe }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% endif %}
+
+                                                <div class="text-end">
+                                                    <a href="/view/cve/{{ cve.id }}" class="btn btn-primary" target="_blank">View Full Details</a>
+                                                </div>
+
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            {% endif %}
+        {% endif %}
+        
+        {% if entity == 'CWE' %}
+            <!-- Risultati per CWE -->
+            {% if results %}
+                <h5>CWE Results</h5>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Description</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if results.id %}
+                            <tr>
+                                <td>{{ results.id }}</td>
+                                <td>{{ results.name }}</td>
+                                <td>{{ results.description|truncatewords:10 }}</td>
+                                <td>
+                                    <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#cweModal{{ results.id }}">
+                                        View Details
+                                    </button>
+                                </td>
+                            </tr>
+                            <div class="modal fade" id="cweModal{{ results.id }}" tabindex="-1" aria-labelledby="cweModalLabel{{ results.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="cweModalLabel{{ results.id }}">Details for {{ results.id }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p><strong>Title:</strong> {{ results.name }}</p>
+                                            <p><strong>Description:</strong> {{ results.description }}</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            {% for cwe in results %}
+                                <tr>
+                                    <td>{{ cwe.id }}</td>
+                                    <td>{{ cwe.name }}</td>
+                                    <td>{{ cwe.description|truncatewords:10 }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#cweModal{{ cwe.id }}">
+                                            View Details
+                                        </button>
+                                    </td>
+                                </tr>
+                                <div class="modal fade" id="cweModal{{ cwe.id }}" tabindex="-1" aria-labelledby="cweModalLabel{{ cwe.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="cweModalLabel{{ cwe.id }}">Details for {{ cwe.id }}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p><strong>Name:</strong> {{ cwe.name }}</p>
+                                                <p><strong>Description:</strong> {{ cwe.description }}</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            {% endif %}
+        {% endif %}
+
+        {% if entity == 'CAPEC' %}
+            <!-- Risultati per CAPEC -->
+            {% if results %}
+                <h5>CAPEC Results</h5>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if results.id %}
+                            <tr>
+                                <td>{{ results.id }}</td>
+                                <td>{{ results.name }}</td>
+                                <td>{{ results.description|truncatewords:10 }}</td>
+                                <td>
+                                    <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#capecModal{{ results.id }}">
+                                    View Details
+                                    </button>
+                                </td>
+                            </tr>
+                            <!-- Modal per il singolo risultato -->
+                            <div class="modal fade" id="capecModal{{ results.id }}" tabindex="-1" aria-labelledby="capecModalLabel{{ results.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="capecModalLabel{{ results.id }}">Details for {{ results.id }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p><strong>Name:</strong> {{ results.name }}</p>
+                                            <p><strong>Description:</strong> {{ results.description }}</p>
+                                            <div class="text-end">
+                                                <a href="/view/capec/{{ results.id }}" class="btn btn-primary" target="_blank">View Full Details</a>
+                                            </div>
+
+                                        </div>
+                                        
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            {% for capec in results %}
+                                <tr>
+                                    <td>{{ capec.id }}</td>
+                                    <td>{{ capec.name }}</td>
+                                    <td>{{ capec.description|truncatewords:10 }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#capecModal{{ capec.id }}">
+                                            View Details
+                                        </button>
+                                    </td>
+                                </tr>
+                                <!-- Modal per i dettagli completi -->
+                                <div class="modal fade" id="capecModal{{ capec.id }}" tabindex="-1" aria-labelledby="capecModalLabel{{ capec.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="capecModalLabel{{ capec.id }}">Details for {{ capec.id }}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p><strong>Title:</strong> {{ capec.name }}</p>
+                                                <p><strong>Description:</strong> {{ capec.description }}</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+
+{% endblock %}

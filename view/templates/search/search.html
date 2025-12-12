@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="col-12 grid-margin stretch-card">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Search</h4>
+                <p class="card-description">All information about CVE - CWE - CAPEC</p>
+                <form class="forms-sample" action="{% url 'view:search_results' %}" method="POST">
+                    {% csrf_token %}
+
+                    <!-- Select the entity between CVE/CWE/CAPEC or ALL -->
+                    <div class="form-group">
+                        <label>Select entity:</label>
+                        <select class="js-example-basic-single w-100" name="entity" id="entity-select">
+                            {% for entity in entities %}
+                                <option value="{{ entity.value }}">{{ entity.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- CVE Form Section if "CVE" selected -->
+                    <div id="cve-section" class="additional-fields" style="display: block;"> <!-- Visible di default -->
+                        <div class="form-group">
+                            <label for="cve-id">Enter the CVE ID:</label>
+                            <div class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text" id="cve-id-prepend">CVE-</span>
+                                </div>
+                                <input type="text" class="form-control" id="cve-id" name="cve-id" placeholder="CVE ID (e.g., CVE-XXXX-YYYY)" />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="start-year">Start Year:</label>
+                            <select class="form-control" id="start-year" name="start_year">
+                                <option value="">Select Start Year</option>
+                                {% for year in years %}
+                                    <option value="{{ year }}">{{ year }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    
+                        <div class="form-group">
+                            <label for="end-year">End Year:</label>
+                            <select class="form-control" id="end-year" name="end_year">
+                                <option value="">Select End Year</option>
+                                {% for year in years %}
+                                    <option value="{{ year }}">{{ year }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    
+                        <div class="form-group">
+                            <label for="random-count">Number of Random CVEs:</label>
+                            <input type="number" class="form-control" id="random-count" name="random_count" min="1" max="100" placeholder="Enter number of CVEs">
+                        </div>
+                        <button type="submit" class="btn btn-primary me-2" id="search-cve">Search CVEs</button>
+                        <button type="button" class="btn btn-light" onclick="clearForm()">Clear</button>
+                    </div>
+                    <!-- End CVE Form Section -->
+
+                    <!-- CWE Form Section if "CWE" selected -->
+                    <div id="cwe-section" class="additional-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="cwe-id">Enter the CWE ID:</label>
+                            <input type="text" class="form-control" id="cwe-id" name="cwe-id" placeholder="CWE-XXXX" title="Format: CWE-XXXX" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cwe-random-count">Random CWEs Count:</label>
+                            <input type="number" class="form-control" id="cwe-random-count" name="cwe-random-count" min="1" max="100" placeholder="Number of random CWEs" />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary me-2" id="search-cwe">Search CWEs</button>
+                        <button type="button" class="btn btn-light" onclick="clearForm()">Clear</button>
+                    </div>
+                    <!-- End CWE Form Section -->
+
+                    <!-- CAPEC Form Section if "CAPEC" selected -->
+                    <div id="capec-section" class="additional-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="capec-id">Enter the CAPEC ID:</label>
+                            <input type="text" class="form-control" id="capec-id" name="capec-id" placeholder="CAPEC-XXXX" title="Format: CAPEC-XXXX" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="capec-random-count">Random CAPECs Count:</label>
+                            <input type="number" class="form-control" id="capec-random-count" name="capec-random-count" min="1" max="100" placeholder="Number of random CAPECs" />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary me-2" id="search-capec">Search CAPECs</button>
+                        <button type="button" class="btn btn-light" onclick="clearForm()">Clear</button>
+                    </div>
+                    <!-- End CAPEC Form Section -->
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Codice JavaScript -->
+<script>
+  console.log("JavaScript is loaded.");
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const entitySelect = document.getElementById('entity-select');
+    const cveSection = document.getElementById('cve-section');
+    const cweSection = document.getElementById('cwe-section');
+    const capecSection = document.getElementById('capec-section');
+
+    entitySelect.addEventListener('change', function() {
+        // Nascondi tutte le sezioni
+        cveSection.style.display = 'none';
+        cweSection.style.display = 'none';
+        capecSection.style.display = 'none';
+
+        // Rimuovi `required` dagli input delle sezioni nascoste
+        document.querySelectorAll('.additional-fields input').forEach(input => {
+            input.removeAttribute('required');
+        });
+
+        // Mostra la sezione corrispondente e aggiungi `required` se necessario
+        if (entitySelect.value === 'CVE') {
+            cveSection.style.display = 'block';
+        } else if (entitySelect.value === 'CWE') {
+            cweSection.style.display = 'block';
+        } else if (entitySelect.value === 'CAPEC') {
+            capecSection.style.display = 'block';
+        }
+    });
+
+    // Imposta di default la selezione a CVE
+    entitySelect.value = 'CVE';  // Assicurati che l'opzione CVE sia selezionata di default
+    cveSection.style.display = 'block';  // Mostra la sezione CVE
+  });
+
+  function clearForm() {
+    document.getElementById('entity-select').selectedIndex = 0; // Reset del selettore
+    document.getElementById('cve-id').value = ''; // Reset del campo CVE ID
+    document.getElementById('cwe-id').value = ''; // Reset del campo CWE ID
+    document.getElementById('capec-id').value = ''; // Reset del campo CAPEC ID
+  }
+</script>
+
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Details for CVE: {{ cve.id }}</h2>
+
+    <div class="row">
+        <!-- CVE General Info Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-info-circle"></i> General Information</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Official URL:</strong> <a href="https://nvd.nist.gov/vuln/detail/{{ cve.id }}" target="_blank">https://nvd.nist.gov/vuln/detail/{{ cve.id }}</a></li>
+                        <li class="list-group-item"><strong>ID:</strong> {{ cve.id }}</li>
+                        <li class="list-group-item"><strong>Assigner:</strong> {{ cve.assigner }}</li>
+                        <li class="list-group-item"><strong>Published Date:</strong> {{ cve.published_date }}</li>
+                        <li class="list-group-item"><strong>Last Modified Date:</strong> {{ cve.last_modified_date }}</li>
+                        <li class="list-group-item"><strong>Description:</strong> {{ cve.description }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Impact V2 Card -->
+        {% if cve.impact_v2 %}
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-shield-exclamation"></i> Impact V2</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Vector String:</strong> {{ cve.get_vector_string }}</li>
+                        <li class="list-group-item"><strong>Attack Vector:</strong> {{ cve.get_attack_vector }}</li>
+                        <li class="list-group-item"><strong>Access Complexity:</strong> {{ cve.get_access_complexity }}</li>
+                        <li class="list-group-item"><strong>Authentication:</strong> {{ cve.get_authentication }}</li>
+                        <li class="list-group-item"><strong>Confidentiality Impact:</strong> {{ cve.get_confidentiality_impact }}</li>
+                        <li class="list-group-item"><strong>Integrity Impact:</strong> {{ cve.get_integrity_impact }}</li>
+                        <li class="list-group-item"><strong>Availability Impact:</strong> {{ cve.get_availability_impact }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Impact V3 Card -->
+        {% if cve.impact_v3 %}
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-shield-check"></i> Impact V3</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Vector String:</strong> {{ cve.get_vector_string_v3 }}</li>
+                        <li class="list-group-item"><strong>Attack Vector:</strong> {{ cve.get_attack_vector_v3 }}</li>
+                        <li class="list-group-item"><strong>Privileges Required:</strong> {{ cve.get_privileges_required_v3 }}</li>
+                        <li class="list-group-item"><strong>User Interaction:</strong> {{ cve.get_user_interaction_v3 }}</li>
+                        <li class="list-group-item"><strong>Confidentiality Impact:</strong> {{ cve.get_confidentiality_impact_v3 }}</li>
+                        <li class="list-group-item"><strong>Integrity Impact:</strong> {{ cve.get_integrity_impact_v3 }}</li>
+                        <li class="list-group-item"><strong>Availability Impact:</strong> {{ cve.get_availability_impact_v3 }}</li>
+                        <li class="list-group-item"><strong>Base Score:</strong> {{ cve.get_base_score_v3 }}</li>
+                        <li class="list-group-item"><strong>Base Severity:</strong> {{ cve.get_base_severity_v3 }}</li>
+                        <li class="list-group-item"><strong>Scope:</strong> {{ cve.get_scope_v3 }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- CPE URIs Card -->
+        {% if cve.vulnerable_cpe_uris %}
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-link-45deg"></i> Vulnerable CPE URIs</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for cpe in cve.vulnerable_cpe_uris %}
+                        <li class="list-group-item">{{ cpe }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Back and Full Details Button -->
+    <div class="d-flex justify-content-between mt-4">
+        <a href="{% url 'view:homepage' %}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Home</a>
+    </div>
+</div>
+{% endblock %}

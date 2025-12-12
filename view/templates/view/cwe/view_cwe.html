@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Details for {{ cwe.id }}</h2>
+
+    <div class="row">
+        <!-- CWE General Info Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-info-circle"></i> General Information</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>ID:</strong> {{ cwe.id }}</li>
+                        <li class="list-group-item"><strong>Name:</strong> {{ cwe.name }}</li>
+                        <li class="list-group-item"><strong>Abstraction:</strong> {{ cwe.get_abstraction_display }}</li>
+                        <li class="list-group-item"><strong>Structure:</strong> {{ cwe.get_structure_display }}</li>
+                        <li class="list-group-item"><strong>Status:</strong> {{ cwe.get_status_display }}</li>
+                        <li class="list-group-item"><strong>Likelihood of Exploit:</strong> {{ cwe.get_likelihood_of_exploit_display }}</li>
+                        <li class="list-group-item"><strong>Description:</strong> {{ cwe.description }}</li>
+                        {% if cwe.extended_description %}
+                            <li class="list-group-item"><strong>Extended Description:</strong> {{ cwe.extended_description }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- CWE Related Attack Patterns Card -->
+        {% if cwe.related_attack_patterns.all %}
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-link-45deg"></i> Related Attack Patterns (CAPEC)</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for capec in cwe.related_attack_patterns.all %}
+                        <li class="list-group-item"><a href="{% url 'view:view_capec' capec.id %}">{{ capec.name }} ({{ capec.id }})</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- CWE Related Weaknesses Card -->
+        {% if cwe.related_weaknesses_from.all %}
+        <div class="col-md-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-diagram-3"></i> Related Weaknesses</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for related in cwe.related_weaknesses_from.all %}
+                        <li class="list-group-item">
+                            {{ related.relation_type }}: <a href="{% url 'view:view_cwe' related.related_cwe.id %}">{{ related.related_cwe.id }} - {{ related.related_cwe.name }}</a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- CWE Potential Mitigations Card -->
+        {% if cwe.potential_mitigations %}
+        <div class="col-md-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-tools"></i> Potential Mitigations</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for mitigation in cwe.potential_mitigations %}
+                        <li class="list-group-item">
+                            <strong>{{ mitigation.phase }}:</strong> {{ mitigation.description }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+
+        <!-- CWE Demonstrative Examples Card -->
+        {% if cwe.demonstrative_examples %}
+        <div class="col-md-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-file-earmark-text"></i> Demonstrative Examples</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for example in cwe.demonstrative_examples %}
+                        <li class="list-group-item">{{ example }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- CWE Observed Examples Card -->
+        {% if cwe.observed_examples %}
+        <div class="col-md-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-eye"></i> Observed Examples</h5>
+                    <ul class="list-group list-group-flush d-flex flex-row flex-wrap" style="gap: 10px;">
+                        {% for example in cwe.observed_examples %}
+                        <li class="list-group-item" style="flex: 0 1 auto; white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">
+                            {{ example.example }} <a href="{% url 'view:view_cve' example.cve_id %}">{{ example.cve_id }}</a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+
+
+    </div>
+
+    <!-- Back to Database Button -->
+    <div class="d-flex justify-content-between mt-4">
+        <a href="{% url 'view:homepage' %}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Database</a>
+    </div>
+</div>
+{% endblock %}

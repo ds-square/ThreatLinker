@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Core</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Graph Task</li>
+        </ol>
+    </nav>
+
+    <!-- Section Header Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="bi bi-graph-up-arrow text-primary" style="font-size: 2rem;"></i>
+                </div>
+                <div>
+                    <h2 class="card-title mb-1">Task: {{ task.name }}</h2>
+                    <p class="card-text text-muted">Status: {{ task.status }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form to Create Graph -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h3 class="card-title mb-4">Configure Graph</h3>
+            <form id="graph-form" method="post" action="{% url 'graph:graph_task_view' task.id %}">
+
+                {% csrf_token %}
+                
+                <!-- Select Similarity Method -->
+                <div class="mb-3">
+                    <label for="similarity_method" class="form-label">Similarity Method:</label>
+                    <select name="similarity_method" id="similarity_method" class="form-select">
+                        {% for method in similarity_methods %}
+                            <option value="{{ method }}">{{ method }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Select CVE Limit -->
+                <div class="mb-3">
+                    <label for="cve_limit" class="form-label">CVE Limit per Host:</label>
+                    <select name="cve_limit" id="cve_limit" class="form-select">
+                        {% for limit in cve_limits %}
+                            <option value="{{ limit }}">{{ limit }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Select Rank Limit -->
+                <div class="mb-3">
+                    <label for="rank_limit" class="form-label">Rank Limit:</label>
+                    <select name="rank_limit" id="rank_limit" class="form-select">
+                        <option value="1">1</option>
+                        <option value="5" selected>5</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Create Graph</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Add any JavaScript validation if needed
+</script>
+
+{% endblock %}

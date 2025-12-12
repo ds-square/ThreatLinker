@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .carousel-control-prev-icon,
+    .carousel-control-next-icon {
+        background-color: rgba(0, 0, 0, 0.5); /* Colore semitrasparente */
+        border-radius: 50%; /* Rendi le frecce rotonde */
+    }
+    .carousel-control-prev,
+    .carousel-control-next {
+        bottom: 10px; /* Posiziona le frecce a 10px dal fondo */
+    }
+</style>
+
+<div class="container mt-5">
+    <h2 class="mb-4">Details for CAPEC: {{ capec.id }}</h2>
+
+    <!-- Carousel -->
+    <div id="capecCarousel" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner">
+            <div class="carousel-item active">
+                <div class="row">
+                    <!-- CAPEC General Info Card -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-info-circle"></i> General Information</h5>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item"><strong>Official Site:</strong> 
+                                        <a href="https://capec.mitre.org/data/definitions/{{ capec.get_numeric_id }}.html" target="_blank">
+                                            https://capec.mitre.org/data/definitions/{{ capec.get_numeric_id }}.html
+                                        </a>
+                                    </li>
+                                    <li class="list-group-item"><strong>ID:</strong> {{ capec.id }}</li>
+                                    <li class="list-group-item"><strong>Name:</strong> {{ capec.name }}</li>
+                                    <li class="list-group-item"><strong>Abstraction Level:</strong> {{ capec.abstraction }}</li>
+                                    <li class="list-group-item"><strong>Status:</strong> {{ capec.status }}</li>
+                                    <li class="list-group-item"><strong>Typical Severity:</strong> {{ capec.typical_severity|default:"N/A" }}</li>
+                                    <li class="list-group-item"><strong>Description:</strong> {{ capec.description|default:"N/A" }}</li>
+                                    <li class="list-group-item"><strong>Extended Description:</strong> {{ capec.extended_description|default:"N/A" }}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Execution Flow Card -->
+                    {% if capec.execution_flow_instance %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-arrow-repeat"></i> Execution Flow</h5>
+                                <p>{{ capec.execution_flow_instance }}</p>
+
+                                <!-- Nav tabs for Attack Steps -->
+                                <ul class="nav nav-tabs" id="attackStepsTabs" role="tablist">
+                                    {% for step in capec.execution_flow_instance.attack_steps.all %}
+                                        {% with step_number=step.step %}
+                                            {% with count=0 %}
+                                                {% for s in capec.execution_flow_instance.attack_steps.all %}
+                                                    {% if s.step == step_number %}
+                                                        {% if count == 0 %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <a class="nav-link {% if forloop.first %}active{% endif %}" id="step{{ step_number }}-tab" data-bs-toggle="tab" href="#step{{ step_number }}" role="tab" aria-controls="step{{ step_number }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                                                                    Step {{ step_number }}
+                                                                </a>
+                                                            </li>
+                                                        {% else %}
+                                                            <li class="nav-item" role="presentation">
+                                                                <a class="nav-link {% if forloop.first %}active{% endif %}" id="step{{ step_number }}{{ count|add:"a" }}-tab" data-bs-toggle="tab" href="#step{{ step_number }}{{ count|add:"a" }}" role="tab" aria-controls="step{{ step_number }}{{ count|add:"a" }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                                                                    Step {{ step_number }}{{ count|add:"a" }}
+                                                                </a>
+                                                            </li>
+                                                        {% endif %}
+                                                        {% with count=count|add:1 %}{% endwith %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endwith %}
+                                        {% endwith %}
+                                    {% endfor %}
+                                </ul>
+
+                                <div class="tab-content" id="attackStepsTabsContent">
+                                    {% for step in capec.execution_flow_instance.attack_steps.all %}
+                                        {% with step_number=step.step %}
+                                            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="step{{ step_number }}{% if forloop.counter > 1 %}{{ forloop.counter|add:"a" }}{% endif %}" role="tabpanel" aria-labelledby="step{{ step_number }}-tab">
+                                                <h6 class="fw-bold">{{ step.phase }}</h6>
+                                                <p class="fw-bold">{{ step.description|default:"N/A" }}</p>
+                                                {% if step.techniques %}
+                                                <small class="text-muted"><strong>Techniques:</strong> {{ step.techniques|join:", " }}</small>
+                                                {% endif %}
+                                            </div>
+                                        {% endwith %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+
+            <!-- Second Carousel Item -->
+            <div class="carousel-item">
+                <div class="row">
+                    <!-- Prerequisites Card -->
+                    {% if capec.prerequisites %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-check-circle"></i> Prerequisites</h5>
+                                <ul class="list-group list-group-flush">
+                                    {% for prerequisite in capec.prerequisites %}
+                                    <li class="list-group-item">{{ prerequisite }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Resources Required Card -->
+                    {% if capec.resources_required %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-tools"></i> Resources Required</h5>
+                                <ul class="list-group list-group-flush">
+                                    {% for resource in capec.resources_required %}
+                                    <li class="list-group-item">{{ resource }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Third Carousel Item -->
+            <div class="carousel-item">
+                <div class="row">
+                    <!-- Mitigations Card -->
+                    {% if capec.mitigations %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-shield-exclamation"></i> Mitigations</h5>
+                                <ul class="list-group list-group-flush">
+                                    {% for mitigation in capec.mitigations %}
+                                    <li class="list-group-item">{{ mitigation }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Example Instances Card -->
+                    {% if capec.example_instances %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-file-earmark-text"></i> Example Instances</h5>
+                                <ul class="list-group list-group-flush">
+                                    {% for instance in capec.example_instances %}
+                                    <li class="list-group-item">{{ instance }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Fourth Carousel Item -->
+            <div class="carousel-item">
+                <div class="row">
+                    <!-- Consequences Card -->
+                    {% if capec.consequences %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-exclamation-circle"></i> Consequences</h5>
+                                <ul class="list-group list-group-flush">
+                                    {% for consequence in capec.consequences %}
+                                    <li class="list-group-item">
+                                        {% if consequence.note %}
+                                        <strong>Note:</strong> {{ consequence.note }}<br>
+                                        {% endif %}
+                                        {% if consequence.impact %}
+                                        <strong>Impact:</strong> {{ consequence.impact }}<br>
+                                        {% endif %}
+                                        {% if consequence.scopes %}
+                                        <strong>Scopes:</strong> {{ consequence.scopes|join:", " }}<br>
+                                        {% endif %}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Skills Required Card -->
+                    {% if capec.skills_required %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-person-circle"></i> Skills Required</h5>
+                                <ul class="list-group list-group-flush">
+                                    {% for skill in capec.skills_required %}
+                                    <li class="list-group-item">
+                                        {% if skill.level %}
+                                        <strong>Level:</strong> {{ skill.level }}<br>
+                                        {% endif %}
+                                        <strong>Skill:</strong> {{ skill.skill }}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Fifth Carousel Item -->
+            <div class="carousel-item">
+                <div class="row">
+                    <!-- Alternate Terms Card -->
+                    {% if capec.alternate_terms %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-journal-text"></i> Alternate Terms</h5>
+                                <ul class="list-group list-group-flush">
+                                    {% for term in capec.alternate_terms %}
+                                    <li class="list-group-item">{{ term }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#capecCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#capecCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
+
+    <!-- Back Button -->
+    <div class="d-flex justify-content-between mt-4">
+        <a href="{% url 'view:homepage' %}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Home</a>
+    </div>
+</div>
+
+<!-- Include Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Include Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" rel="stylesheet">
+
+<!-- Include Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+{% endblock %}

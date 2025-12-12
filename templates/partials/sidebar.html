@@ -1,0 +1,116 @@
+<!-- partial:partials/_sidebar.html -->
+{% load static %}
+<nav class="sidebar sidebar-offcanvas" id="sidebar">
+  <ul class="nav">
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'view:homepage' %}">
+        <i class="mdi mdi-view-dashboard menu-icon"></i>
+        <span class="menu-title">Dashboard</span>
+      </a>
+    </li>
+
+    <li class="nav-item nav-category">Database</li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="collapse" href="#ui-basic" aria-expanded="false" aria-controls="ui-basic">
+        <i class="menu-icon mdi mdi-database-cog-outline"></i>
+        <span class="menu-title">Database</span>
+        <i class="menu-arrow"></i>
+      </a>
+      <div class="collapse" id="ui-basic">
+        <ul class="nav flex-column sub-menu">
+          <li class="nav-item"> <a class="nav-link" href="{% url 'data:database_status' %}">Info</a></li>
+          <li class="nav-item"> <a class="nav-link" href="{% url 'data:database_update' %}">Update</a></li>
+          <li class="nav-item"> <a class="nav-link" href="{% url 'data:database_stats' %}">Statistics</a></li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="collapse" href="#form-elements" aria-expanded="false" aria-controls="form-elements">
+            <i class="menu-icon mdi mdi-file-search-outline"></i>
+            <span class="menu-title">Search</span>
+            <i class="menu-arrow"></i>
+        </a>
+        <div class="collapse" id="form-elements">
+            <ul class="nav flex-column sub-menu">
+                <li class="nav-item"> <a class="nav-link" href="{% url 'view:search' %}">CVE/CWE/CAPEC</a></li>
+                <li class="nav-item"> <a class="nav-link" href="{% url 'view:view_error' %}">Reports</a></li>
+            </ul>
+        </div>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="collapse" href="#charts" aria-expanded="false" aria-controls="charts">
+        <i class="menu-icon mdi mdi-graph"></i>
+        <span class="menu-title">Graph</span>
+        <i class="menu-arrow"></i>
+      </a>
+      <div class="collapse" id="charts">
+        <ul class="nav flex-column sub-menu">
+          <li class="nav-item"> <a class="nav-link" href="{% url 'view:view_error' %}">Generate</a></li>
+        </ul>
+      </div>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="collapse" href="#tables" aria-expanded="false" aria-controls="tables">
+        <i class="menu-icon mdi mdi-skull-scan"></i>
+        <span class="menu-title">Correlate</span>
+        <i class="menu-arrow"></i>
+      </a>
+      <div class="collapse" id="tables">
+        <ul class="nav flex-column sub-menu">
+          <li class="nav-item"> <a class="nav-link" href="{% url 'core:correlation_make_request' %}">Make Correlation Request</a></li>
+          <li class="nav-item"> <a class="nav-link" href="{% url 'core:tasks_list' %}">Task List</a></li>
+          <li class="nav-item"> <a class="nav-link" href="{% url 'core:groundtruth_list' %}">Ground Truth</a></li>
+        </ul>
+      </div>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="collapse" href="#text" aria-expanded="false" aria-controls="text">
+        <i class="menu-icon mdi mdi-format-text"></i>
+        <span class="menu-title">Text</span>
+        <i class="menu-arrow"></i>
+      </a>
+      <div class="collapse" id="text">
+        <ul class="nav flex-column sub-menu">
+          <li class="nav-item"> <a class="nav-link" href="{% url 'core:text_similarity' %}">Text Similarity</a></li>
+          <li class="nav-item"> <a class="nav-link" href="{% url 'core:text_preprocessing' %}">Text Preprocessing</a></li>
+        </ul>
+      </div>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="collapse" href="#icons" aria-expanded="false" aria-controls="icons">
+        <i class="menu-icon mdi mdi-file-chart"></i>
+        <span class="menu-title">Reports</span>
+        <i class="menu-arrow"></i>
+      </a>
+      <div class="collapse" id="icons">
+        <ul class="nav flex-column sub-menu">
+          <li class="nav-item"> <a class="nav-link" href="{% url 'view:view_error' %}">Results</a></li>
+        </ul>
+      </div>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="collapse" href="#auth" aria-expanded="false" aria-controls="auth">
+        <i class="menu-icon mdi mdi-cog"></i>
+        <span class="menu-title">Settings</span>
+        <i class="menu-arrow"></i>
+      </a>
+      <div class="collapse" id="auth">
+        <ul class="nav flex-column sub-menu">
+          <li class="nav-item"> <a class="nav-link" href="{% url 'view:view_error' %}"> Database </a></li>
+          <li class="nav-item"> <a class="nav-link" href="{% url 'view:view_error' %}"> Correlation </a></li>
+          <li class="nav-item"> <a class="nav-link" href="{% url 'view:view_error' %}"> Limits </a></li>
+          <li class="nav-item"> <a class="nav-link" href="{% url 'view:view_error' %}"> Text Processing </a></li>
+          <li class="nav-item"> <a class="nav-link" href="{% url 'view:view_error' %}"> Filter </a></li>
+        </ul>
+      </div>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'view:view_error' %}">
+        <i class="menu-icon mdi mdi-file-document"></i>
+        <span class="menu-title">Documentation</span>
+      </a>
+    </li>
+  </ul>
+</nav>
+<!-- partial -->

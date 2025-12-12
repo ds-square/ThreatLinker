@@ -1,0 +1,618 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container mt-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Home</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Graph Task View</li>
+            </ol>
+        </nav>
+        
+        <div class="card">
+            <div class="card-header">
+                Task: {{ task.name }}
+            </div>
+            <div class="card-body">
+                <p><strong>Status:</strong> {{ task.status }}</p>
+            </div>
+        </div>
+    </div>
+
+    <h2>Graph: CVE Nodes and CAPEC</h2>
+
+    <div id="context-menu" style="position: absolute; visibility: hidden; background-color: white; border: 1px solid black; padding: 5px;">
+        <ul style="list-style-type: none; margin: 0; padding: 0;">
+            <li id="show-connections">Show Connections</li>
+            <li id="show-attack-steps" style="display: none;">Show Attack Steps</li>
+        </ul>
+    </div>
+
+    <!-- Bottone per attivare lo schermo intero -->
+    <button id="fullscreen-btn" class="btn btn-primary">Go Fullscreen</button>
+
+    <!-- Area per il grafo -->
+    <svg width="800" height="600"></svg>
+
+    <!-- Tooltip personalizzato -->
+    <div id="tooltip" style="position: absolute; visibility: hidden; background-color: white; padding: 5px; border: 1px solid black;"></div>
+
+    <!-- Area laterale per visualizzare le informazioni -->
+    <div id="info-panel" style="position: fixed; top: 0; right: 0; width: 300px; height: 100vh; background-color: white; border-left: 1px solid black; padding: 20px; overflow-y: auto; visibility: hidden;">
+        <h3>Node Information</h3>
+        <div id="info-content">
+            <!-- Le informazioni dinamiche saranno inserite qui -->
+        </div>
+    </div>
+
+    <!-- Area per il modal -->
+    <div class="modal fade" id="cveModal" tabindex="-1" aria-labelledby="cveModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cveModalLabel">Details for CVE</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="modal-body-content">
+                    <!-- Il contenuto del modal sarà inserito dinamicamente qui -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <script type="text/javascript">
+        // I dati vengono passati direttamente dal backend come variabili 'nodes' e 'edges'
+        let nodes = {{ nodes_json|safe }};
+        let edges = {{ edges_json|safe }};
+
+        let nodesDeepCopy = JSON.parse(JSON.stringify(nodes));
+        let edgesDeepCopy = JSON.parse(JSON.stringify(edges));
+
+        let attackStepsVisibility = {};  // Mappa globale per salvare lo stato degli Attack Steps
+
+        
+        // Colori dei nodi
+        const nodeColors = {
+            'cve': 'red',
+            'capec': 'green'
+        };
+
+        const nodeRadii = {
+            'cve': 10,  // Dimensione dei nodi CVE
+            'capec': 15  // I nodi CAPEC sono più grandi
+        };
+
+        // Seleziona l'area SVG per disegnare il grafo
+        const svg = d3.select("svg")
+              .attr("width", 800)
+              .attr("height", 600);
+
+        // Crea un gruppo per i nodi e i link
+        const g = svg.append("g");
+
+        // Crea i link (archi)
+        const link = g.append("g")
+            .selectAll("line")
+            .data(edges)
+            .enter().append("line")
+            .attr("stroke", "gray")
+            .attr("stroke-width", 1);
+
+        // Seleziona tooltip
+        const tooltip = d3.select("#tooltip");
+
+        // Crea i nodi
+        const node = g.append("g")
+            .selectAll("circle")
+            .data(nodes)
+            .enter().append("circle")
+            .attr("r", d => nodeRadii[d.type])  // Dimensioni diverse per CVE e CAPEC
+            .attr("fill", d => nodeColors[d.type])  // Colore rosso per CVE, verde per CAPEC
+            .attr("stroke", d => d.has_execution_flow ? 'gold' : 'none')  // Contorno dorato se il CAPEC ha ExecutionFlow
+            .attr("stroke-width", d => d.has_execution_flow ? 3 : 0)  // Spessore del contorno
+            .call(d3.drag()  // Dragging per i nodi
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended)); 
+
+        // Aggiungi etichette (ID dei nodi) che diventano visibili con lo zoom
+        const labels = g.append("g")
+            .selectAll("text")
+            .data(nodes)
+            .enter().append("text")
+            .attr("dy", d => d.type === 'capec' ? -20 : -15)  // Maggiore offset per i nodi CAPEC
+            .attr("text-anchor", "middle")
+            .text(d => d.id)  // Mostra l'ID del nodo
+            .style("font-size", "12px")
+            .style("fill", "#000");
+
+        node.on("mouseover", (event, d) => {
+                // Mostra solo gli archi correlati al nodo selezionato
+                link.attr("stroke-opacity", l => l.source === d || l.target === d ? 1 : 0.1);
+
+                // Mostra il tooltip
+                tooltip.style("visibility", "visible")
+                    .html(`<strong>ID:</strong> ${d.id}<br><strong>Type:</strong> ${d.type === 'cve' ? 'CVE' : 'CAPEC'}`);
+            })
+            .on("mousemove", event => {
+                tooltip.style("top", (event.pageY - 10) + "px")
+                       .style("left", (event.pageX + 10) + "px");
+            })
+            .on("mouseout", () => {
+                // Ripristina la visibilità di tutti gli archi
+                link.attr("stroke-opacity", 1);
+                // Nascondi il tooltip
+                tooltip.style("visibility", "hidden");
+            })
+            .on("contextmenu", (event, d) => {
+                event.preventDefault();  // Impedisce il menu di default del clic destro
+            
+                // Verifica se gli Attack Steps sono visibili
+                const showStepsOption = d.type === 'capec' && d.has_execution_flow && !d.attackStepsVisible ?
+                    '<li><a href="#" id="show-steps">Show Attack Steps</a></li>' : '';
+                const hideStepsOption = d.type === 'capec' && d.has_execution_flow && d.attackStepsVisible ?
+                    '<li><a href="#" id="hide-steps">Hide Attack Steps</a></li>' : '';
+            
+                // Crea il menu a tendina
+                const menu = document.createElement("div");
+                menu.style.position = "absolute";
+                menu.style.left = `${event.pageX}px`;
+                menu.style.top = `${event.pageY}px`;
+                menu.style.backgroundColor = "white";
+                menu.style.border = "1px solid black";
+                menu.style.padding = "5px";
+                menu.innerHTML = `
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li><a href="#" id="show-links">Show Links</a></li>
+                        ${showStepsOption}
+                        ${hideStepsOption}
+                    </ul>
+                `;
+            
+                document.body.appendChild(menu);
+            
+                // Rimuovi il menu quando si clicca fuori
+                document.addEventListener("click", () => {
+                    menu.remove();
+                }, { once: true });
+            
+                // Gestisci l'evento "Show Attack Steps"
+                if (d.type === 'capec' && d.has_execution_flow) {
+                    document.getElementById("show-steps").addEventListener("click", () => {
+                        console.log("Sono dentro show steps")
+                        attackStepsVisibility[d.id] = true;
+                        regenerateGraph();  // Mostra gli attack steps
+                        menu.remove();
+                    });
+                }
+            
+                // Gestisci l'evento "Hide Attack Steps"
+                if (d.type === 'capec' && d.has_execution_flow && d.attackStepsVisible) {
+                    document.getElementById("hide-steps").addEventListener("click", () => {
+                        hideAttackSteps(d);  // Nascondi gli attack steps
+                        menu.remove();
+                    });
+                }
+            
+                // Gestisci l'evento "Show Links"
+                document.getElementById("show-links").addEventListener("click", () => {
+                    // Nascondi tutti i nodi tranne quello selezionato e i suoi collegati
+                    node.attr("visibility", n => (n === d || edges.some(l => (l.source === d && l.target === n) || (l.source === n && l.target === d))) ? "visible" : "hidden");
+                    link.attr("visibility", l => (l.source === d || l.target === d) ? "visible" : "hidden");
+                    labels.attr("visibility", l => (l === d || edges.some(link => (link.source === d && link.target === l) || (link.source === l && link.target === d))) ? "visible" : "hidden");
+                    menu.remove();  // Rimuovi il menu
+                });
+            })                                 
+            .on("click", (event, d) => {
+                if (d.type === 'cve' || d.type === 'capec') {
+                    // Quando clicchi sul nodo CVE, apri il modal con i dati della CVE
+                    showModal(d);
+                    // Bocciata -> showInfoPanel(d); 
+                }
+            });
+            
+
+        // Aggiungi un doppio clic all'intero SVG per ripristinare tutti i nodi e archi
+        svg.on("dblclick", () => {
+            console.log("Doppio clic rilevato! Ripristino visibilità di nodi e archi.");  // Logging per debug
+
+            // Ripristina la visibilità di tutti i nodi
+            node.attr("visibility", "visible");
+
+            // Ripristina la visibilità di tutti gli archi
+            link.attr("visibility", "visible");
+
+             // Ripristina la visibilità di tutti i labels
+            labels.attr("visibility", "visible");
+
+        });
+
+        
+
+        function displayAttackSteps(capecNode) {
+            const executionFlow = capecNode.execution_flow;
+            if (!executionFlow) {
+                console.log("No execution flow found for CAPEC node");
+                return;
+            }
+        
+            // Stampa il CAPEC node e il suo execution flow
+            console.log("CAPEC Node:", capecNode);
+            console.log("Execution Flow:", executionFlow);
+        
+            const attackSteps = executionFlow.map((step, index) => ({
+                id: `${capecNode.id}_step_${index + 1}`,
+                type: 'attack_step',
+                step: step.step,
+                phase: step.phase,
+                description: step.description,
+                techniques: step.techniques,
+                parent: capecNode.id
+            }));
+        
+            const attackStepLinks = attackSteps.map(step => ({
+                source: capecNode,  // Qui usiamo direttamente l'oggetto capecNode
+                target: step  // Usiamo l'oggetto step per il target
+            }));
+        
+            // Controllo sui link
+            console.log("Links generati per gli attack steps:");
+            attackStepLinks.forEach(link => {
+                console.log("Source:", link.source.id, "Target:", link.target.id);
+            });
+        
+            // Stampa i dettagli degli archi creati
+            console.log("Attack Step Links:", attackStepLinks);
+        
+            // Aggiungi i nodi degli Attack Steps al grafo
+            const newNodes = g.selectAll("circle.attack_step")
+                .data(attackSteps, d => d.id)
+                .enter()
+                .append("circle")
+                .attr("r", 7)
+                .attr("fill", "orange")
+                .attr("class", "attack_step")
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended))
+                .on("click", (event, step) => {
+                    showAttackStepModal(step);
+                });
+        
+            // Stampa i nuovi nodi creati nel grafo
+            console.log("New Nodes Added to Graph:", newNodes);
+        
+            // Controllo sui dati degli archi prima di aggiungerli
+            attackStepLinks.forEach(link => {
+                console.log(`Collegamento da ${link.source.id} a ${link.target.id}`);
+            });
+        
+            // Aggiungi gli archi tra CAPEC e Attack Steps
+            const newLinks = g.selectAll("line.attack_step_link")
+                .data(attackStepLinks, d => `${d.source.id}-${d.target.id}`)
+                .enter()
+                .append("line")
+                .attr("stroke", "orange")
+                .attr("stroke-width", 2)
+                .attr("class", "attack_step_link")
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+        
+            // Stampa i nuovi archi creati nel grafo
+            console.log("New Links Added to Graph:", newLinks);
+        
+            // Aggiungi nuovi nodi degli Attack Steps agli esistenti
+            nodes = nodes.concat(attackSteps);
+            console.log("Updated Nodes:", nodes);  // Stampa tutti i nodi
+        
+            // Aggiungi nuovi archi (edges) agli esistenti
+            edges = edges.concat(attackStepLinks);
+            console.log("Updated Edges:", edges);  // Stampa tutti gli archi
+        }
+        
+
+        function updateAttackSteps(capecNode) {
+            const executionFlow = capecNode.execution_flow;
+            if (!executionFlow) {
+                console.log("No execution flow found for CAPEC node");
+                return;
+            }
+        
+            const attackSteps = executionFlow.map((step, index) => ({
+                id: `${capecNode.id}_step_${index + 1}`,
+                type: 'attack_step',
+                step: step.step,
+                phase: step.phase,
+                description: step.description,
+                techniques: step.techniques,
+                parent: capecNode.id
+            }));
+        
+            const attackStepLinks = attackSteps.map(step => ({
+                source: capecNode.id,
+                target: step.id
+            }));
+        
+            // Aggiungi i nodi degli Attack Steps al grafo
+            const newNodes = g.selectAll("circle.attack_step")
+                .data(attackSteps, d => d.id)
+                .enter()
+                .append("circle")
+                .attr("r", 7)
+                .attr("fill", "orange")
+                .attr("class", "attack_step")
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended))
+                .on("click", (event, step) => {
+                    showAttackStepModal(step);
+                });
+        
+            // Aggiungi gli archi tra CAPEC e Attack Steps
+            const newLinks = g.selectAll("line.attack_step_link")
+                .data(attackStepLinks)
+                .enter()
+                .append("line")
+                .attr("stroke", "orange")
+                .attr("stroke-width", 2)
+                .attr("class", "attack_step_link");
+        
+            // Aggiorna la simulazione per includere i nuovi nodi e archi
+            simulation.nodes(nodes.concat(attackSteps));  // Aggiorna la simulazione dei nodi
+            simulation.force("link").links(edges.concat(attackStepLinks));  // Aggiorna gli archi
+        
+            simulation.alpha(1).restart();  // Riavvia la simulazione
+        }
+        
+        
+        function removeAllAttackSteps() {
+            console.log("Sonop dentro removeAllAttackSteps");
+            // Rimuovi tutti i nodi degli attack steps
+            g.selectAll("circle.attack_step").remove();
+            
+            // Rimuovi tutti gli archi associati agli attack steps
+            g.selectAll("line.attack_step_link").remove();
+            
+            // Filtra la lista dei nodi ed elimina quelli di tipo 'attack_step'
+            nodes = nodes.filter(node => node.type !== 'attack_step');
+            
+            // Filtra la lista degli archi ed elimina quelli legati agli attack step
+            edges = edges.filter(edge => edge.source.type !== 'attack_step' && edge.target.type !== 'attack_step');
+            
+        }
+
+        function hideAttackSteps(capecNode) {
+            // Rimuovi i nodi e archi degli Attack Steps di questo CAPEC
+            g.selectAll(`circle.attack_step`).remove();
+            g.selectAll(`line.attack_step_link`).remove();
+        
+            // Rimuovi i nodi e gli archi dalla simulazione
+            nodes = nodes.filter(node => node.parent !== capecNode.id);
+            edges = edges.filter(edge => edge.source !== capecNode.id && edge.target !== capecNode.id);
+            simulation.nodes(nodes);  // Aggiorna la simulazione dei nodi
+            simulation.force("link").links(edges);  // Aggiorna gli archi
+            simulation.alpha(1).restart();  // Riavvia la simulazione
+        
+            // Imposta lo stato degli Attack Steps come nascosti
+            attackStepsVisibility[capecNode.id] = false;
+        }
+
+        function regenerateGraph() {
+            // Rimuovi tutti gli attack steps esistenti
+            removeAllAttackSteps();
+        
+            // Rigenera il grafo e controlla se ci sono Attack Steps visibili per qualche CAPEC
+            Object.keys(attackStepsVisibility).forEach(capecId => {
+                if (attackStepsVisibility[capecId]) {
+                    console.log(`${capecId} è visibile`);
+                    const capecNode = nodes.find(n => n.id === capecId);
+                    if (capecNode) {
+                        displayAttackSteps(capecNode);  // Ripristina gli Attack Steps
+                    }
+                }
+            });
+        
+            // Aggiorna la simulazione mantenendo tutti i nodi e archi
+            simulation.nodes(nodes);  // Include tutti i nodi esistenti + nuovi
+            simulation.force("link").links(edges);  // Include tutti gli archi esistenti + nuovi
+            simulation.alpha(1).restart();  // Riavvia la simulazione
+        }
+        
+        
+        // Funzionalità di schermo intero
+        const fullscreenButton = document.getElementById('fullscreen-btn');
+
+        fullscreenButton.addEventListener('click', () => {
+            const graphContainer = document.querySelector('svg');
+            if (graphContainer.requestFullscreen) {
+                graphContainer.requestFullscreen();
+            } else if (graphContainer.mozRequestFullScreen) { // Firefox
+                graphContainer.mozRequestFullScreen();
+            } else if (graphContainer.webkitRequestFullscreen) { // Chrome, Safari and Opera
+                graphContainer.webkitRequestFullscreen();
+            } else if (graphContainer.msRequestFullscreen) { // IE/Edge
+                graphContainer.msRequestFullscreen();
+            }
+        });
+
+        // Esci dalla modalità schermo intero premendo "Esc"
+        document.addEventListener('keydown', (event) => {
+            if (event.key === "Escape") {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) { // Firefox
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) { // Chrome, Safari and Opera
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) { // IE/Edge
+                    document.msExitFullscreen();
+                }
+            }
+        });
+
+        // Simulazione delle forze D3.js
+
+        /* const simulation = d3.forceSimulation(nodes)
+            .force("charge", d3.forceManyBody().strength(d => d.type === "cve" ? -10 : -10))  // Riduce ulteriormente la forza di repulsione
+            .force("link", d3.forceLink(edges).id(d => d.id).distance(60).strength(0.1))  // Aumenta la distanza dei collegamenti
+            .force("center", d3.forceCenter(400, 300))  // Centra il grafo
+            .force("collision", d3.forceCollide().radius(30))  // Evita la sovrapposizione dei nodi con più spazio
+            .alphaDecay(0.05);  // Rallenta il decadimento dell'alpha per stabilizzare il grafo più velocemente */
+
+        const simulation = d3.forceSimulation(nodes)
+            .force("charge", d3.forceManyBody().strength(d => d.type === "cve" ? -150 : -60))  // Diversa forza repulsiva per CVE e CAPEC
+            .force("charge", d3.forceManyBody().strength(-120).distanceMax(200))  // Limita la repulsione sui nodi distanti
+            .force("link", d3.forceLink(edges).id(d => d.id).distance(40).strength(0.9))  // Collegamenti più vicini
+            .force("center", d3.forceCenter(400, 300))  // Centra il grafo
+            .force("collision", d3.forceCollide().radius(25));  // Evita la sovrapposizione dei nodi
+            //.force("cluster", d3.forceCluster().centroid(d => [d.x, d.y]));  // Forza di clustering per raggruppare i nodi */
+            
+
+        // Simulazione della posizione dei nodi e dei collegamenti
+        simulation.on("tick", () => {
+            link.attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node.attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+
+            // Aggiorna le posizioni degli Attack Steps
+            g.selectAll("circle.attack_step")
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+
+            g.selectAll("line.attack_step_link")
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            // Aggiorna la posizione delle etichette in base ai nodi
+            labels.attr("x", d => d.x)
+                .attr("y", d => d.y);
+        });
+
+
+       // Definisci la scala di zoom
+        const zoom = d3.zoom()
+        .scaleExtent([0.1, 5])  // Intervallo di zoom: da 0.1 a 5
+        .on("zoom", (event) => {
+            g.attr("transform", event.transform);  // Applica lo zoom e il pan
+
+            // Controlla il livello di zoom
+            const zoomLevel = event.transform.k;
+
+            // Controlla la visibilità del nodo e il livello di zoom per mostrare o nascondere le etichette
+            labels.style("visibility", (d) => {
+                // Controlla la visibilità del nodo
+                const nodeVisibility = node.filter(n => n.id === d.id).attr("visibility");
+                // Mostra le etichette solo se il livello di zoom è maggiore di 1.5 e il nodo è visibile
+                return (zoomLevel > 1.5 && nodeVisibility !== "hidden") ? "visible" : "hidden";
+            });
+
+            // Modifica la dimensione del testo in base al livello di zoom
+            labels.style("font-size", `${12 / zoomLevel}px`);  // Riduci la dimensione del testo in proporzione
+        });
+
+
+
+          
+
+        svg.call(zoom);
+
+        
+
+        function zoomToNode(nodeId) {
+            const node = nodes.find(n => n.id === nodeId);
+            if (node) {
+                const transform = d3.zoomIdentity
+                    .translate(400 - node.x, 300 - node.y)
+                    .scale(1.5);  // Imposta uno zoom di 1.5 sul nodo selezionato
+        
+                svg.transition().duration(750).call(zoom.transform, transform);
+            }
+        }
+
+        // Funzione per aprire il modal con i dati della CVE
+        function showModal(cveData) {
+            const modalTitle = document.getElementById('cveModalLabel');
+            const modalBodyContent = document.getElementById('modal-body-content');
+
+            if (cveData.type === 'cve') {
+                // Imposta il titolo del modal
+                modalTitle.textContent = `Details for ${cveData.id}`;
+
+                // Popola il corpo del modal con le informazioni della CVE
+                modalBodyContent.innerHTML = `
+                    <p><strong>Description:</strong> ${cveData.description}</p>
+                    <p><strong>Impact V2:</strong> ${cveData.impact_v2 ? JSON.stringify(cveData.impact_v2, null, 2) : 'N/A'}</p>
+                    <p><strong>Impact V3:</strong> ${cveData.impact_v3 ? JSON.stringify(cveData.impact_v3, null, 2) : 'N/A'}</p>
+                    <div class="text-end">
+                        <a href="/view/cve/${cveData.id}" class="btn btn-primary" target="_blank">View Full Details</a>
+                    </div>
+                `;
+            } else if (cveData.type === 'capec') {
+                // Imposta il titolo del modal
+                modalTitle.textContent = `Details for ${cveData.id}`;
+
+                // Popola il corpo del modal con le informazioni della CVE
+                modalBodyContent.innerHTML = `
+                    <p><strong>Name:</strong> ${cveData.name}</p>
+                    <p><strong>Description:</strong> ${cveData.description}</p>
+                    <div class="text-end">
+                        <a href="/view/capec/${cveData.id}" class="btn btn-primary" target="_blank">View Full Details</a>
+                    </div>
+                `;
+            }
+
+            // Apri il modal utilizzando Bootstrap
+            const modal = new bootstrap.Modal(document.getElementById('cveModal'));
+            modal.show();
+        }
+
+        function showAttackStepModal(stepData) {
+            const modalTitle = document.getElementById('cveModalLabel');
+            const modalBodyContent = document.getElementById('modal-body-content');
+        
+            modalTitle.textContent = `Details for Attack Step ${stepData.step}`;
+            modalBodyContent.innerHTML = `
+                <p><strong>Phase:</strong> ${stepData.phase}</p>
+                <p><strong>Description:</strong> ${stepData.description}</p>
+                <p><strong>Techniques:</strong> ${stepData.techniques ? stepData.techniques.join(', ') : 'N/A'}</p>
+            `;
+        
+            const modal = new bootstrap.Modal(document.getElementById('cveModal'));
+            modal.show();
+        }
+        
+
+        // Funzioni di drag (trascinamento)
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+    </script>
+{% endblock %}

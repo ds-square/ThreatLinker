@@ -1,0 +1,453 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .fullscreen {
+        width: 100vw;
+        height: 100vh;
+        background-color: white; /* Cambia colore se necessario */
+        overflow: hidden;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 9999;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Graph Task View</li>
+        </ol>
+    </nav>
+    
+    <div class="card">
+        <div class="card-header">
+            Task: {{ task.name }}
+        </div>
+        <div class="card-body">
+            <p><strong>Status:</strong> {{ task.status }}</p>
+            <p><strong>Similarity Method:</strong> {{ similarity_method }}</p>
+            <p><strong>CVE Limit:</strong> {{ cve_limit }}</p>
+            <p><strong>Rank Limit:</strong> {{ rank_limit }}</p>
+        </div>
+    </div>
+</div>
+
+<button id="fullscreen-btn" class="btn btn-primary mb-3">Fullscreen</button>
+
+<!-- Area per il grafo -->
+<svg width="800" height="1200"></svg>
+
+<!-- Tooltip personalizzato -->
+<div id="tooltip" style="position: absolute; visibility: hidden; background-color: white; padding: 5px; border: 1px solid black;"></div>
+
+<!-- Modal per informazioni sui nodi -->
+<div class="modal fade" id="nodeModal" tabindex="-1" aria-labelledby="nodeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="nodeModalLabel">Node Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modal-body-content">
+                <!-- Il contenuto del modal sarà inserito dinamicamente qui -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script type="text/javascript">
+    // Dati passati dal backend come JSON
+    const hostCveMap = {{ host_cve_map|safe }};
+    const resultData = {{ result_data|safe }};
+    const cveData = {{ cve_data|safe }};
+    const capecData = {{ capec_data|safe }};
+    
+    const nodes = [];
+    const links = [];
+
+    // Creazione dei nodi e archi
+
+    // Mappa per tracciare i nodi CAPEC già creati
+    const createdCapecNodes = new Map();
+    Object.entries(hostCveMap).forEach(([host, cves]) => {
+        nodes.push({ id: host, type: 'host', cves });
+
+        cves.forEach(cve => {
+            const cveInfo = cveData[cve];
+            nodes.push({ id: cve, type: 'cve', description: cveInfo?.description || "No description available." });
+            links.push({ source: host, target: cve });
+
+            const capecs = resultData[cve] || [];
+
+            capecs.forEach(capec => {
+                const capecInfo = capecData[capec.capec_id];
+                if (capecInfo) {
+                    // Controlla se il nodo CAPEC è già stato creato
+                    if (!createdCapecNodes.has(capec.capec_id)) {
+                        nodes.push({
+                            id: capec.capec_id,
+                            type: 'capec',
+                            name: capecInfo?.name || "No name available",
+                            description: capecInfo?.description || "No description available"
+                        });
+                        // Aggiungi il CAPEC alla mappa dei nodi creati
+                        createdCapecNodes.set(capec.capec_id, true);
+                    }
+                    // Aggiungi comunque il collegamento con la CVE
+                    links.push({ source: cve, target: capec.capec_id, rank: capec.rank });
+
+                }
+            });
+ 
+            
+        });
+    });
+
+    const nodeColors = { cve: "red", capec: "green" };
+    const nodeSizes = { cve: 10, capec: 15 };
+
+    const svg = d3.select("svg")
+        .attr("width", 800)
+        .attr("height", 600);
+    
+    let currentAngle = 0; // Angolo corrente in gradi
+    let isRotating = false; // Stato di rotazione
+
+    const g = svg.append("g");
+
+    const link = g.append("g")
+        .selectAll("line")
+        .data(links)
+        .enter()
+        .append("line")
+        .attr("stroke", d => {
+            if (d.rank !== undefined) {
+                return getLinkColor(d.rank);
+            }
+            return "gray"; // Default color for links without rank
+        })
+        .attr("stroke-width", 1);
+
+
+    const node = g.append("g")
+        .selectAll("circle")
+        .data(nodes.filter(d => d.type !== "host"))
+        .enter()
+        .append("circle")
+        .attr("r", d => nodeSizes[d.type])
+        .attr("fill", d => nodeColors[d.type])
+        .call(d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended));
+
+    // Aggiunta icone host
+    const hostIcons = g.append("g")
+        .selectAll("image")
+        .data(nodes.filter(d => d.type === "host"))
+        .enter()
+        .append("image")
+        .attr("xlink:href", "/static/icons/desktop.png")
+        .attr("width", 30)
+        .attr("height", 30)
+        .attr("x", -15)
+        .attr("y", -15)
+        .call(d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended));
+
+    const labels = g.append("g")
+        .selectAll("text")
+        .data(nodes)
+        .enter()
+        .append("text")
+        .attr("dy", -15)
+        .attr("text-anchor", "middle")
+        .text(d => d.id)
+        .style("visibility", "hidden")
+        .style("font-size", "12px");
+
+    const tooltip = d3.select("#tooltip");
+
+    // Funzione per il modal degli host
+    hostIcons.on("click", (event, d) => {
+        const modalTitle = document.getElementById("nodeModalLabel");
+        const modalBodyContent = document.getElementById("modal-body-content");
+
+        modalTitle.textContent = `Host Details: ${d.id}`;
+        modalBodyContent.innerHTML = `
+            <p><strong>Number of Associated CVEs:</strong> ${d.cves.length}</p>
+            <p><strong>Associated CVEs:</strong></p>
+            <ul>
+                ${d.cves.map(cve => `<li>${cve}</li>`).join("")}
+            </ul>
+        `;
+
+        const modal = new bootstrap.Modal(document.getElementById("nodeModal"));
+        modal.show();
+    });
+
+    node.on("mouseover", (event, d) => {
+         // Mostra solo gli archi correlati al nodo selezionato
+         link.attr("stroke-opacity", l => l.source === d || l.target === d ? 1 : 0.1);
+
+        tooltip.style("visibility", "visible")
+            .html(`<strong>ID:</strong> ${d.id}<br><strong>Type:</strong> ${d.type}`);
+    })
+    .on("mousemove", event => {
+        tooltip.style("top", (event.pageY - 10) + "px")
+            .style("left", (event.pageX + 10) + "px");
+    })
+    .on("mouseout", () => {
+        // Ripristina la visibilità di tutti gli archi
+        link.attr("stroke-opacity", 1);
+        tooltip.style("visibility", "hidden");
+    })
+    .on("click", (event, d) => {
+        const modalTitle = document.getElementById("nodeModalLabel");
+        const modalBodyContent = document.getElementById("modal-body-content");
+
+        if (d.type === "host") {
+            modalTitle.textContent = `Host Details: ${d.id}`;
+            modalBodyContent.innerHTML = `
+                <p><strong>Associated CVEs:</strong></p>
+                <ul>
+                    ${d.cves.map(cve => `<li>${cve}</li>`).join("")}
+                </ul>
+            `;
+        } else if (d.type === "cve") {
+            modalTitle.textContent = `CVE Details: ${d.id}`;
+            modalBodyContent.innerHTML = `
+                <p><strong>Description:</strong> ${d.description}</p>
+                <div class="text-end">
+                    <a href="/view/cve/${d.id}" class="btn btn-primary" target="_blank">View CVE</a>
+                </div>
+            `;
+        } else if (d.type === "capec") {
+            modalTitle.textContent = `CAPEC Details: ${d.id}`;
+            modalBodyContent.innerHTML = `
+                <p><strong>Name:</strong> ${d.name}</p>
+                <p><strong>Description:</strong> ${d.description}</p>
+                <div class="text-end">
+                    <a href="/view/capec/${d.id}" class="btn btn-primary" target="_blank">View CAPEC</a>
+                </div>
+            `;
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById("nodeModal"));
+        modal.show();
+    })
+    .on("contextmenu", (event, d) => {
+        event.preventDefault(); // Impedisce il menu di default del clic destro
+    
+        // Crea il menu a tendina
+        const menu = document.createElement("div");
+        menu.style.position = "absolute";
+        menu.style.left = `${event.pageX}px`;
+        menu.style.top = `${event.pageY}px`;
+        menu.style.backgroundColor = "white";
+        menu.style.border = "1px solid black";
+        menu.style.padding = "5px";
+        menu.innerHTML = `
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                <li><a href="#" id="show-links">Show Links</a></li>
+            </ul>
+        `;
+    
+        document.body.appendChild(menu);
+    
+        // Rimuovi il menu quando si clicca fuori
+        document.addEventListener("click", () => {
+            menu.remove();
+        }, { once: true });
+    
+        // Gestisci l'evento "Show Links"
+        document.getElementById("show-links").addEventListener("click", () => {
+            // Filtra i nodi e collegamenti correlati
+            node.attr("visibility", n => 
+                (n === d || links.some(l => 
+                    (l.source.id === d.id && l.target.id === n.id) || 
+                    (l.target.id === d.id && l.source.id === n.id))) 
+                ? "visible" : "hidden"
+            );
+    
+            link.attr("visibility", l => 
+                (l.source.id === d.id || l.target.id === d.id) 
+                ? "visible" : "hidden"
+            );
+    
+            labels.attr("visibility", n => 
+                (n.id === d.id || links.some(l => 
+                    (l.source.id === d.id && l.target.id === n.id) || 
+                    (l.target.id === d.id && l.source.id === n.id))) 
+                ? "visible" : "hidden"
+            );
+    
+            menu.remove(); // Rimuovi il menu
+        });
+    });
+
+    svg.on("mousedown", (event) => {
+        if (event.button === 2) { // Tasto destro del mouse
+            isRotating = true;
+            svg.style("cursor", "grabbing"); // Cambia il cursore per indicare la rotazione
+        }
+    });
+    
+    svg.on("mousemove", (event) => {
+        if (isRotating) {
+            const centerX = svg.attr("width") / 2;
+            const centerY = svg.attr("height") / 2;
+    
+            // Calcola l'angolo in base alla posizione del mouse
+            const dx = event.offsetX - centerX;
+            const dy = event.offsetY - centerY;
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    
+            // Aggiorna la trasformazione di rotazione
+            currentAngle = angle;
+            g.attr("transform", `rotate(${currentAngle}, ${centerX}, ${centerY})`);
+        }
+    });
+    
+    svg.on("mouseup", (event) => {
+        if (event.button === 2) { // Tasto destro del mouse
+            isRotating = false;
+            svg.style("cursor", "default"); // Ripristina il cursore
+        }
+    });
+    
+    svg.on("contextmenu", (event) => {
+        event.preventDefault(); // Evita il menu contestuale predefinito
+    });
+    
+    svg.on("dblclick", () => {
+        console.log("Doppio clic rilevato! Ripristino visibilità di nodi e archi e reset rotazione."); // Debug
+    
+        // Ripristina visibilità di nodi e archi
+        node.attr("visibility", "visible");
+        link.attr("visibility", "visible");
+        labels.attr("visibility", "visible");
+    
+        // Reset della rotazione
+        currentAngle = 0;
+        g.attr("transform", `rotate(0, ${svg.attr("width") / 2}, ${svg.attr("height") / 2})`);
+    });
+    
+
+    // Zoom e Labels con visibilità
+    const zoom = d3.zoom()
+        .scaleExtent([0.1, 5])
+        .on("zoom", event => {
+            g.attr(
+                "transform",
+                `${event.transform} rotate(${currentAngle}, ${svg.attr("width") / 2}, ${svg.attr("height") / 2})`
+            );
+            const zoomLevel = event.transform.k;
+
+            // Controlla la visibilità delle etichette in base al livello di zoom e alla visibilità dei nodi
+            labels.style("visibility", d => {
+                // Gestisce la visibilità delle etichette per host e altri tipi
+                if (d.type === "host") {
+                    // Gli host devono essere sempre visibili se il livello di zoom è sufficiente
+                    return zoomLevel > 1.5 ? "visible" : "hidden";
+                } else {
+                    // Per gli altri nodi, verifica la visibilità associata
+                    const associatedNode = node.filter(n => n.id === d.id);
+                    const visibility = associatedNode.size() > 0 ? associatedNode.attr("visibility") : "hidden";
+                    return (zoomLevel > 1.5 && visibility !== "hidden") ? "visible" : "hidden";
+                }
+            });
+            
+        });
+
+    svg.call(zoom);
+
+    const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(50))
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(400, 300))
+        .on("tick", () => {
+            link.attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node.attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+
+            hostIcons.attr("x", d => d.x - 10)
+                .attr("y", d => d.y - 10);
+
+            labels.attr("x", d => d.x)
+                .attr("y", d => d.y);
+        });
+    
+    document.getElementById("fullscreen-btn").addEventListener("click", () => {
+        const svgContainer = document.querySelector("svg"); // Seleziona il contenitore del grafo
+        if (!document.fullscreenElement) {
+            // Entra in fullscreen
+            svgContainer.classList.add("fullscreen");
+            svgContainer.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+            });
+        } else {
+            // Esci dal fullscreen
+            document.exitFullscreen();
+            svgContainer.classList.remove("fullscreen");
+        }
+    });
+
+    document.addEventListener("fullscreenchange", () => {
+        const svgContainer = document.querySelector("svg");
+        if (!document.fullscreenElement) {
+            svgContainer.classList.remove("fullscreen");
+        }
+    });
+    
+        
+    function getLinkColor(rank) {
+        if (rank === 1) {
+            return "gold";
+        } else if (rank >= 2 && rank <= 5) {
+            return "darkgreen";
+        } else if (rank >= 6 && rank <= 10) {
+            return "lightgreen";
+        } else if (rank >= 11 && rank <= 20) {
+            return "orange";
+        } else {
+            return "red";
+        }
+    }
+        
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+    }
+
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+</script>
+{% endblock %}

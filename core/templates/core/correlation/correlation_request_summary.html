@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Core</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Correlation Request Summary</li>
+        </ol>
+    </nav>
+
+    <!-- Section Header Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="bi bi-link-45deg text-primary" style="font-size: 2rem;"></i>
+                </div>
+                <div>
+                    <h2 class="card-title mb-1">Correlation Request Summary</h2>
+                    <p class="card-text text-muted">Here is a summary of your correlation request.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Creation Form -->
+    <div class="card shadow-sm mb-4 mt-4">
+        <div class="card-body">
+            <h5 class="card-title">Correlation Task Details</h5>
+            
+            <!-- Form to create a Correlation Task -->
+            <form method="POST" action="{% url 'core:start_correlation_task' %}">
+                {% csrf_token %}
+                
+                <!-- Task Name -->
+                <div class="mb-3">
+                    <label for="task_name" class="form-label">Task Name</label>
+                    <input type="text" name="task_name" id="task_name" class="form-control" required>
+                </div>
+
+                <!-- Task Notes -->
+                <div class="mb-3">
+                    <label for="task_notes" class="form-label">Task Notes</label>
+                    <textarea name="task_notes" id="task_notes" class="form-control" rows="3"></textarea>
+                </div>
+
+                <!-- Text Preprocessing Options -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Text Preprocessing for CVE</h5>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="preprocessing_lowercase">
+                            <label class="form-check-label" for="preprocessing_lowercase">Lowercase</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="preprocessing_remove_stopwords">
+                            <label class="form-check-label" for="preprocessing_remove_stopwords">Remove Stopwords</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="preprocessing_lemmatize">
+                            <label class="form-check-label" for="preprocessing_lemmatize">Lemmatization</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CAPEC Version Selection -->
+                <div class="mb-3">
+                    <label for="capec_version" class="form-label">CAPEC Version</label>
+                    <select name="capec_version" id="capec_version" class="form-select">
+                        <option value="default">Default</option>
+                        <option value="Basic">Basic Preprocessing</option>
+                        <option value="Stopwords">StopWords Preprocessing</option>
+                        <option value="Lemmatization">Lemmatization Preprocessing</option>
+                        <option value="Stemming">Stemming Preprocessing</option>
+                    </select>
+                </div>
+
+                <!-- Campo nascosto per le opzioni di preprocessing in formato JSON -->
+                <input type="hidden" name="processing_options" id="processing_options" value="{}">
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-success mt-4">Start Correlation Task</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Information -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Summary</h5>
+            <p><strong>Total valid CVEs found:</strong> {{ cve_count }}</p>
+
+            <!-- Display number of hosts -->
+            <p>
+                <strong>Hosts:</strong>
+                {% if hosts %}
+                    {% if hosts|length == 1 %}
+                        Single Host
+                    {% else %}
+                        Network ({{ hosts|length }} hosts)
+                    {% endif %}
+                {% else %}
+                    Single Host
+                {% endif %}
+            </p>
+
+            <!-- Button to Show CVEs -->
+            <button class="btn btn-primary" id="show-cves-btn">Show CVEs</button>
+        </div>
+    </div>
+
+    <!-- New Box for Show CVEs Section -->
+    <div id="cve-show-box" class="collapse mt-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Full List of CVEs</h5>
+                <p class="card-text">Here are the full CVEs for your request:</p>
+                
+                {% if hosts %}
+                    <div class="row">
+                        {% for host, cves in hosts.items %}
+                            <div class="col-md-12 mb-4">
+                                <h6>Host: {{ host }}</h6>
+                                <p>
+                                    {% for cve in cves %}
+                                        <a href="/view/cve/{{ cve }}" target="_blank">{{ cve }}</a>{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>
+                        {% for cve in cve_list %}
+                            <a href="/view/cve/{{ cve }}" target="_blank">{{ cve }}</a>{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Similarity Methods Used -->
+    <div class="card shadow-sm mb-4 mt-4">  <!-- Added mt-4 for margin-top -->
+        <div class="card-body">
+            <h5 class="card-title">Similarity Methods Used</h5>
+            <ul class="list-group list-group-flush">
+                {% for method in selected_similarity_methods %}
+                    <li class="list-group-item">{{ method }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Button to Return to the Request Form -->
+    <a href="{% url 'core:correlation_make_request' %}" class="btn btn-secondary mt-4">Back to Form</a>
+</div>
+
+<script>
+    document.getElementById('show-cves-btn').addEventListener('click', function () {
+        const cveShowBox = document.getElementById('cve-show-box');
+
+        // Toggle collapse to show or hide CVEs by host or single host CVEs
+        cveShowBox.classList.toggle('collapse');
+
+        const buttonText = cveShowBox.classList.contains('collapse') ? 'Show CVEs' : 'Hide CVEs';
+        this.textContent = buttonText;
+    });
+
+    // Funzione per aggiornare il campo hidden con le opzioni di preprocessing
+    function updateProcessingOptions() {
+        const options = {
+            lowercase: document.getElementById('preprocessing_lowercase').checked,
+            remove_stopwords: document.getElementById('preprocessing_remove_stopwords').checked,
+            lemmatization: document.getElementById('preprocessing_lemmatization').checked
+        };
+        document.getElementById('processing_options').value = JSON.stringify(options);
+    }
+
+    // Aggiungi listener per aggiornare il campo nascosto quando cambiano le opzioni
+    document.getElementById('preprocessing_lowercase').addEventListener('change', updateProcessingOptions);
+    document.getElementById('preprocessing_remove_stopwords').addEventListener('change', updateProcessingOptions);
+    document.getElementById('preprocessing_lemmatization').addEventListener('change', updateProcessingOptions);
+
+    // Inizializzazione
+    updateProcessingOptions();
+    
+</script>
+{% endblock %}

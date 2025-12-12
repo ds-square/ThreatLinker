@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Core</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Correlate GroundTruth</li>
+        </ol>
+    </nav>
+
+    <!-- Section Header Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="card-title mb-3">Correlate GroundTruth</h2>
+            <p class="card-text text-muted">Chosen GroundTruth: <strong>{{ groundtruth.name }}</strong></p>
+        </div>
+    </div>
+
+    <!-- Form to create a Correlation Task -->
+    <form method="POST" action="{% url 'core:start_groundtruth_correlation_task' groundtruth.id %}">
+        {% csrf_token %}
+
+        <!-- Task Name -->
+        <div class="mb-3">
+            <label for="task_name" class="form-label">Task Name</label>
+            <input type="text" name="task_name" id="task_name" class="form-control" required>
+        </div>
+
+        <!-- Task Notes -->
+        <div class="mb-3">
+            <label for="task_notes" class="form-label">Task Notes</label>
+            <textarea name="task_notes" id="task_notes" class="form-control" rows="3"></textarea>
+        </div>
+
+        <!-- Similarity Methods -->
+        <div class="mb-3">
+            <h5>Choose Similarity Methods</h5>
+            {% if not similarity_methods %}
+                <div class="text-danger">At least one similarity method must be selected.</div>
+            {% endif %}
+            <div class="form-check">
+                <div class="row justify-content-center">
+                    {% for method in similarity_methods %}
+                        <div class="col-md-4 mb-3">
+                            <input class="form-check-input" type="checkbox" name="similarity_methods" id="method_{{ method }}" value="{{ method }}">
+                            <label class="form-check-label" for="method_{{ method }}">{{ method }}</label>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Text Preprocessing Options -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Text Preprocessing for CVE</h5>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="preprocessing_lowercase" id="preprocessing_lowercase">
+                    <label class="form-check-label" for="preprocessing_lowercase">Lowercase</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="preprocessing_remove_stopwords" id="preprocessing_remove_stopwords">
+                    <label class="form-check-label" for="preprocessing_remove_stopwords">Remove Stopwords</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="preprocessing_lemmatize" id="preprocessing_lemmatize">
+                    <label class="form-check-label" for="preprocessing_lemmatize">Lemmatization</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- CAPEC Version Selection -->
+        <div class="mb-3">
+            <label for="capec_version" class="form-label">CAPEC Version</label>
+            <select name="capec_version" id="capec_version" class="form-select">
+                <option value="default">Default</option>
+                <option value="Basic">Basic Preprocessing</option>
+                <option value="Stopwords">StopWords Preprocessing</option>
+                <option value="Lemmatization">Lemmatization Preprocessing</option>
+                <option value="Stemming">Stemming Preprocessing</option>
+            </select>
+        </div>
+
+        <!-- Hidden Field for Processing Options as JSON -->
+        <input type="hidden" name="processing_options" id="processing_options" value="{}">
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-success mt-4">Start Correlation Task</button>
+    </form>
+</div>
+{% endblock %}

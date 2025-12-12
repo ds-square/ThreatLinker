@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% load custom_filters %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"> 
+
+<style>
+#capecTable {
+    display: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Core</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'core:tasks_list' %}">Task List</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'core:task_detail' task.id %}">Task Details</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ cve.id }}</li>
+        </ol>
+    </nav>
+    
+    <!-- Section Header Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="card-title mb-3">Correlation results for {{ cve.id }}</h2>
+            <p class="card-text text-muted">Associated to hosts: {{ correlation.hosts }} </p>
+            <p class="card-text text-muted">Processed with models: 
+                {% for model in model_names %}
+                    <strong>{{ model }} </strong> <!-- Qui mostri solo il nome del modello -->
+                {% endfor %}
+            </p>
+        </div>
+    </div>
+
+    <div class="col-12 grid-margin stretch-card mb-4">
+        <!-- Card per CVE -->
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">{{ cve.id }}</h4>
+                <p><strong>Description:</strong> {{ cve.description }}</p>
+                <p><strong>More Details: <a href="{% url 'view:view_cve' cve.id %}" target="_blank">{{ cve.id }}</a></strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabella delle CAPEC correlate per la CVE -->
+    <div class="col-12 grid-margin stretch-card">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Related CAPECs Ranking by Model</h4>
+                <p class="card-description">Mostrando le CAPEC correlate con i punteggi per ciascun modello.</p>
+                <table id="capecTable" class="table table-striped display responsive nowrap" style="width:100%">
+                    <thead>
+                        <tr>
+                            
+                            <th>CAPEC ID</th>
+                            <th>CAPEC Name</th>
+                            {% for model in model_names %}
+                                <th>Rank {{ model }}</th>  <!-- Aggiungi una colonna per ogni modello -->
+                            {% endfor %}
+                        
+                            <th>Details</th>  <!-- Colonna per il bottone "Details" -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for capec_ident, capec_values in capecs.items %}
+                            <tr>
+                                        
+                                <!-- Prima colonna: CAPEC ID -->
+                                <td><a href="{% url "view:view_capec" capec_ident %}" target="_blank">{{ capec_ident }}</td>
+                                
+                                <!-- Seconda colonna: CAPEC Name -->
+                                <td>{{ capec_values.name|default:"No CAPEC Data" }}</td>
+                                
+                                <!-- Colonna Rank: mostra il numero di riga -->
+                                {% for model_name in model_names %}
+                                <td>
+                                    {% with capec_score=modelName_ordered_scores|get_dict_value:model_name %}
+                                        {% if capec_score %}
+                                            {% for capec_id, capec_data in capec_score %}
+                                                {% if capec_ident == capec_id %}
+                                                    {{ capec_data.rank }} 
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% else %}
+                                            No Rank
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                                {% endfor %}
+                                    <td>
+                                        <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#capecModal{{ capec_ident }}">
+                                            View Details
+                                        </button>
+                                    </td>              
+                            </tr>
+                            <!-- Modale per i dettagli delle CAPEC -->
+                            <div class="modal fade" id="capecModal{{ capec_ident }}" tabindex="-1" aria-labelledby="capecModalLabel{{ capec_ident }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="capecModalLabel{{ capec_ident }}">Details for CAPEC {{ capec_ident }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+
+                                            {% for model_name in model_names %}
+                                                {% with capec_score=modelName_ordered_scores|get_dict_value:model_name %}
+                                                    {% if capec_score %}
+                                                        {% for capec_id, capec_data in capec_score %}
+                                                            {% if capec_ident == capec_id %}
+                                                                <ul>
+                                                                    {% if capec_data.final_score %}
+                                                                        <li><strong>{{ model_name }} Final Score:</strong> {{ capec_data.final_score|floatformat:3 }}</li>
+                                                                    {% endif %}
+
+                                                                    {% if capec_data.name_score %}
+                                                                        <li><strong>{{ model_name }} Name Score:</strong> {{ capec_data.name_score|floatformat:3 }}</li>
+                                                                    {% endif %}
+                                                                    
+                                                                    {% if capec_data.description_score %}
+                                                                        <li><strong>{{ model_name }} Description Score:</strong> {{ capec_data.description_score|floatformat:3 }}</li>
+                                                                    {% endif %}
+                                                                    
+                                                                    {% if capec_data.extended_description_score %}
+                                                                        <li><strong>{{ model_name }} Extended Description Score:</strong> {{ capec_data.extended_description_score|floatformat:3 }}</li>
+                                                                    {% endif %}
+                                                                    
+                                                                    {% if capec_data.executionflow_score %}
+                                                                    <li><strong>{{ model_name }} ExecutionFlow Score:</strong> {{ capec_data.executionflow_score|floatformat:3 }}</li>
+                                                                    {% endif %}
+
+                                                                    {% if capec_data.skills_required_score %}
+                                                                        <li><strong>{{ model_name }} Skills Required Score:</strong> {{ capec_data.skills_required_score|join:", " }}</li>
+                                                                    {% endif %}
+                                                                    
+                                                                    {% if capec_data.prerequisites_score %}
+                                                                        <li><strong>{{ model_name }} Prerequisites Score:</strong> {{ capec_data.prerequisites_score|join:", " }}</li>
+                                                                    {% endif %}
+
+                                                                    {% if capec_data.indicators_score %}
+                                                                        <li><strong>{{ model_name }} Indicators Score:</strong> {{ capec_data.indicators_score|join:", " }}</li>
+                                                                    {% endif %}
+                                                                    
+                                                                    {% if capec_data.mitigations_score %}
+                                                                        <li><strong>{{ model_name }} Mitigations Score:</strong> {{ capec_data.mitigations_score|join:", " }}</li>
+                                                                    {% endif %}
+
+                                                                    {% if capec_data.example_instances_score %}
+                                                                        <li><strong>{{ model_name }} Example Instances Score:</strong> {{ capec_data.example_instances_score|join:", " }}</li>
+                                                                    {% endif %}
+                                                                    
+                                                                   
+                                                                </ul>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        No data
+                                                    {% endif %}
+                                                {% endwith %}
+                                            {% endfor %}
+
+
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </tbody>
+                    
+                    
+                </table>
+            </div>
+        </div>
+    </div>
+    
+
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Includi jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Includi DataTables JS -->
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+<!-- JavaScript per DataTables -->
+<script>
+    function downloadLog(logs, filename = "debug_logs.json") {
+        const logBlob = new Blob([JSON.stringify(logs, null, 2)], { type: "application/json" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(logBlob);
+        link.download = filename;
+        link.click();
+    }
+
+    
+    let debugLogs = []; // Array per raccogliere i log
+
+    $(document).ready(function() {
+        debugLogs.push("Initializing DataTable...");
+        let rankColumns = [];
+
+        $('#capecTable thead th').each(function(index) {
+            let columnTitle = $(this).text().trim();
+            debugLogs.push(`Column ${index}: ${columnTitle}`);
+            if (columnTitle.includes("Rank")) {
+                rankColumns.push(index);
+            }
+        });
+
+        debugLogs.push("Identified Rank Columns:", rankColumns);
+
+        var table = $('#capecTable').DataTable({
+            "responsive": true,
+            "paging": true,
+            "ordering": true,
+            "info": true,
+            "pageLength": 5,
+            "stateSave": true,
+            "columnDefs": [
+                { 
+                    "orderable": true, 
+                    "targets": rankColumns,
+                    "type": "num"
+                }
+            ],
+            "initComplete": function(settings, json) {
+                debugLogs.push("DataTable initialized with settings:", settings);
+                debugLogs.push("Loaded JSON Data:", json);
+                $('#capecTable').fadeIn();
+            }
+        });
+
+        table.columns(rankColumns).every(function(index) {
+            debugLogs.push(`Processing column ${index} for numeric enforcement...`);
+            this.data().each(function(cellData, rowIndex) {
+                debugLogs.push(`Row ${rowIndex}, Column ${index}, Data: ${cellData}`);
+            });
+        });
+
+        // Scarica i log una volta completata l'inizializzazione
+        //downloadLog(debugLogs);
+    });
+</script>
+{% endblock %}

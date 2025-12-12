@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Core</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Correlation</li>
+        </ol>
+    </nav>
+
+    <!-- Section Header Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="bi bi-link-45deg text-primary" style="font-size: 2rem;"></i>
+                </div>
+                <div>
+                    <h2 class="card-title mb-1">Make Request</h2>
+                    <p class="card-text text-muted">Submit a list of CVEs or upload a file to analyze.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form to Upload CVEs -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h3 class="card-title mb-4">Enter CVE List or Upload File</h3>
+            <form id="cve-form" method="post" enctype="multipart/form-data" action="{% url 'core:correlation_make_request' %}">
+                {% csrf_token %}
+                
+                <!-- Text Input for CVEs -->
+                <div class="mb-3">
+                    <label for="cve_list" class="form-label">CVE List (separate with commas):</label>
+                    <textarea name="cve_list" id="cve_list" class="form-control" rows="5"></textarea>
+                    {% if not cve_list %}
+                        <div class="text-danger">You must provide either a list of CVEs or upload a file.</div>
+                    {% endif %}
+                </div>
+
+                <!-- File Upload -->
+                <div class="mb-3">
+                    <label for="file" class="form-label">Upload XML, CSV, or Excel file:</label>
+                    <input type="file" name="file" id="file" class="form-control" accept=".xml,.csv,.xls,.xlsx">
+                    {% if not file %}
+                        <div class="text-danger">You must provide either a list of CVEs or upload a file.</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Similarity Methods -->
+                <div class="mb-3">
+                    <h5>Choose Similarity Methods</h5>
+                    {% if not similarity_methods %}
+                        <div class="text-danger">At least one similarity method must be selected.</div>
+                    {% endif %}
+                    <div class="form-check">
+                        <div class="row justify-content-center">
+                            {% for method in similarity_methods %}
+                                <div class="col-md-4 mb-3">
+                                    <input class="form-check-input" type="checkbox" name="similarity_methods" id="method_{{ method }}" value="{{ method }}">
+                                    <label class="form-check-label" for="method_{{ method }}">{{ method }}</label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('cve-form').addEventListener('submit', function(event) {
+        const cveListInput = document.getElementById('cve_list').value.trim();
+        const fileInput = document.getElementById('file').files.length;
+        const selectedMethods = document.querySelectorAll('input[name="similarity_methods"]:checked').length;
+
+        // Check that either CVE list or file is provided
+        if (!cveListInput && !fileInput) {
+            event.preventDefault();  // Prevent form submission
+            alert("You must provide either a list of CVEs or upload a file.");
+            return;
+        }
+
+        // Check that at least one similarity method is selected
+        if (selectedMethods === 0) {
+            event.preventDefault();  // Prevent form submission
+            alert("At least one similarity method must be selected.");
+            return;
+        }
+    });
+</script>
+
+{% endblock %}

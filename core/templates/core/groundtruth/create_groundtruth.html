@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<style>
+    .capec-tag {
+        display: inline-block;
+        padding: 5px 10px;
+        margin: 2px;
+        background-color: #e0e0e0;
+        border-radius: 5px;
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Core</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Create GroundTruth</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="card-title mb-3">Create GroundTruth</h2>
+            <p class="card-text text-muted">Specify the GroundTruth name and associate CVEs with sets of CAPECs manually or via a JSON file.</p>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="post" action="{% url 'core:create_groundtruth' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="name" class="form-label">GroundTruth Name</label>
+            <input type="text" name="name" class="form-control" required>
+        </div>
+
+        <!-- JSON File Upload -->
+        <div class="form-group mt-4">
+            <label for="json_file">Upload JSON File</label>
+            <input type="file" class="form-control" id="json_file" name="json_file" accept=".json">
+            <small class="form-text text-muted">Or manually add CVE and CAPEC associations below.</small>
+        </div>
+
+        <!-- Dynamic CVE and CAPEC Association -->
+        <div id="cve-capec-container"></div>
+        <button type="button" id="add-cve-capec" class="btn btn-secondary mt-2">Add CVE with CAPEC Set</button>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary mt-4">Create GroundTruth</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+
+<script>
+document.getElementById('add-cve-capec').addEventListener('click', function() {
+    const container = document.getElementById('cve-capec-container');
+    
+    const cveInput = document.createElement('input');
+    cveInput.setAttribute('type', 'text');
+    cveInput.setAttribute('name', 'cve_id[]');
+    cveInput.setAttribute('placeholder', 'Enter CVE ID');
+    cveInput.classList.add('form-control', 'my-2', 'cve-input');
+
+    const capecContainer = document.createElement('div');
+    capecContainer.classList.add('form-control', 'my-2', 'capec-container');
+    capecContainer.style.position = 'relative';
+
+    const capecInput = document.createElement('input');
+    capecInput.setAttribute('type', 'text');
+    capecInput.setAttribute('placeholder', 'Enter CAPEC IDs');
+    capecInput.classList.add('capec-input');
+    capecContainer.appendChild(capecInput);
+
+    container.appendChild(cveInput);
+    container.appendChild(capecContainer);
+
+    $(cveInput).autocomplete({
+        source: function(request, response) {
+            $.ajax({
+                url: "{% url 'core:get_cve_suggestions' %}",
+                dataType: "json",
+                data: { query: request.term },
+                success: function(data) {
+                    response($.map(data, function(item) {
+                        return { label: item.id + " - " + item.description, value: item.id };
+                    }));
+                }
+            });
+        },
+        minLength: 2
+    });
+
+    $(capecInput).autocomplete({
+        source: function(request, response) {
+            $.ajax({
+                url: "{% url 'core:get_capec_suggestions' %}",
+                dataType: "json",
+                data: { query: request.term },
+                success: function(data) {
+                    response($.map(data, function(item) {
+                        return { label: item.id + " - " + item.name, value: item.id };
+                    }));
+                }
+            });
+        },
+        minLength: 2,
+        select: function(event, ui) {
+            event.preventDefault();
+            const capecTag = document.createElement('span');
+            capecTag.classList.add('capec-tag');
+            capecTag.textContent = ui.item.value;
+            const hiddenInput = document.createElement('input');
+            hiddenInput.setAttribute('type', 'hidden');
+            hiddenInput.setAttribute('name', 'capec_set[]');
+            hiddenInput.setAttribute('value', ui.item.value);
+            capecContainer.insertBefore(capecTag, capecInput);
+            capecContainer.appendChild(hiddenInput);
+            capecInput.value = '';
+        }
+    });
+});
+</script>
+{% endblock %}

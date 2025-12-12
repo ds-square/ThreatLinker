@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Core</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Text Similarity</li>
+        </ol>
+    </nav>
+
+    <!-- Section Header Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="bi bi-bar-chart-line-fill text-primary" style="font-size: 2rem;"></i>
+                </div>
+                <div>
+                    <h2 class="card-title mb-1">Text Similarity Overview</h2>
+                    <p class="card-text text-muted">Enter two sentences to compare their similarity scores using the available models.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Text Similarity Form -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h3 class="card-title mb-4">Compare Text Similarity</h3>
+            <form action="{% url 'core:text_similarity_result' %}" method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="sentence1" class="form-label">First Sentence:</label>
+                    <textarea name="sentence1" id="sentence1" class="form-control" rows="3" required></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="sentence2" class="form-label">Second Sentence:</label>
+                    <textarea name="sentence2" id="sentence2" class="form-control" rows="3" required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Compare</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

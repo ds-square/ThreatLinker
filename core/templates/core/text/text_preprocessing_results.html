@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Core</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'core:text_preprocessing' %}">Text Preprocessing</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Result</li>
+        </ol>
+    </nav>
+
+    <!-- Section Header Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="bi bi-card-checklist text-success" style="font-size: 2rem;"></i>
+                </div>
+                <div>
+                    <h2 class="card-title mb-1">Preprocessed Text Result</h2>
+                    <p class="card-text text-muted">Here is the cleaned and formatted version of your text based on the selected options.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Display Processed Text -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h3 class="card-title mb-4">Processed Text</h3>
+
+            <div class="mb-4">
+                <h5>Original Sentence</h5>
+                <p>{{ original_sentence }}</p>
+            </div>
+
+            <div class="mb-4">
+                <h5>Processed Text</h5>
+                <p>{{ processed_text }}</p>
+            </div>
+
+            <h5>Options Used:</h5>
+            <ul class="list-group mb-4">
+                {% for option, selected in options.items %}
+                <li class="list-group-item">
+                    {{ option }}: {% if selected %}Enabled{% else %}Disabled{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+
+            <a href="{% url 'core:text_preprocessing' %}" class="btn btn-secondary mt-4">Preprocess Another Sentence</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

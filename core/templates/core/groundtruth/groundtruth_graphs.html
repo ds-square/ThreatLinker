@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    #recallChart, #precisionChart, #mrrChart, #crChart {
+        width: 100%;
+        max-height: 500px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Core</a></li>
+            <li class="breadcrumb-item active" aria-current="page">GroundTruth Graphs</li>
+        </ol>
+    </nav>
+
+    <!-- Section Header Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="card-title mb-3">GroundTruth Graphs</h2>
+            <p class="card-text text-muted">Task ID: {{ task.id }}</p>
+        </div>
+    </div>
+
+    <!-- Form to Select GroundTruth -->
+    <form method="POST">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="groundtruth" class="form-label">Select GroundTruth</label>
+            <select name="groundtruth" id="groundtruth" class="form-select" required>
+                <option value="">Choose a GroundTruth...</option>
+                {% for groundtruth in groundtruths %}
+                    <option value="{{ groundtruth.id }}">{{ groundtruth.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Show Results</button>
+    </form>
+
+    <!-- Recall@k Section -->
+    <div id="recallGraphContainer" style="display: none;" class="mt-5">
+        <h3>Interactive Recall@k Graph</h3>
+        <table class="table table-bordered score-table">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Recall@1</th>
+                    <th>Recall@5</th>
+                    <th>Recall@10</th>
+                    <th>Recall@20</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for model, values in formatted_recall_ranks.items %}
+                <tr>
+                    <td>{{ model }}</td>
+                    <td>{{ values.Recall_at_1 }}</td>
+                    <td>{{ values.Recall_at_5 }}</td>
+                    <td>{{ values.Recall_at_10 }}</td>
+                    <td>{{ values.Recall_at_20 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <canvas id="recallChart"></canvas>
+    </div>
+
+    <!-- Precision@k Section -->
+    <div id="precisionGraphContainer" style="display: none;" class="mt-5">
+        <h3>Interactive Precision@k Graph</h3>
+        <table class="table table-bordered score-table">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Precision@1</th>
+                    <th>Precision@5</th>
+                    <th>Precision@10</th>
+                    <th>Precision@20</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for model, values in formatted_precision_ranks.items %}
+                <tr>
+                    <td>{{ model }}</td>
+                    <td>{{ values.Precision_at_1 }}</td>
+                    <td>{{ values.Precision_at_5 }}</td>
+                    <td>{{ values.Precision_at_10 }}</td>
+                    <td>{{ values.Precision_at_20 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <canvas id="precisionChart"></canvas>
+    </div>
+
+    <!-- MRR Section -->
+    <div id="mrrGraphContainer" style="display: none;" class="mt-5">
+        <h3>Mean Reciprocal Rank (MRR) Graph</h3>
+        <table class="table table-bordered score-table">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>MRR</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for model, values in formatted_mrr_ranks.items %}
+                <tr>
+                    <td>{{ model }}</td>
+                    <td>{{ values.MRR_Rank }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <canvas id="mrrChart"></canvas>
+    </div>
+
+
+    <!-- CR Section -->
+    <div id="crGraphContainer" style="display: none;" class="mt-5">
+        <h3>Coverage Graph</h3>
+        <table class="table table-bordered score-table">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Coverage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for model, values in formatted_cr_ranks.items %}
+                <tr>
+                    <td>{{ model }}</td>
+                    <td>{{ values.CR_Rank }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <canvas id="crChart"></canvas>
+    </div>
+
+    <!-- MRR@k Section -->
+    <div id="mrrRecursiveGraphContainer" style="display: none;" class="mt-5">
+        <h3>Interactive MRR@k Graph</h3>
+        <table class="table table-bordered score-table">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>MRR@1</th>
+                    <th>MRR@5</th>
+                    <th>MRR@10</th>
+                    <th>MRR@20</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for model, values in formatted_mrr_recursive_ranks.items %}
+                <tr>
+                    <td>{{ model }}</td>
+                    <td>{{ values.MRR_at_1 }}</td>
+                    <td>{{ values.MRR_at_5 }}</td>
+                    <td>{{ values.MRR_at_10 }}</td>
+                    <td>{{ values.MRR_at_20 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <canvas id="mrrRecursiveChart"></canvas>
+    </div>
+
+    <!-- F1@k Section -->
+    <div id="f1GraphContainer" style="display: none;" class="mt-5">
+        <h3>Interactive F1@k Graph</h3>
+        
+        <table class="table table-bordered score-table">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>F1@1</th>
+                    <th>F1@5</th>
+                    <th>F1@10</th>
+                    <th>F1@20</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for model, values in formatted_f1_recursive_ranks.items %}
+                <tr>
+                    <td>{{ model }}</td>
+                    <td>{{ values.F1_at_1 }}</td>
+                    <td>{{ values.F1_at_5 }}</td>
+                    <td>{{ values.F1_at_10 }}</td>
+                    <td>{{ values.F1_at_20 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <canvas id="f1Chart"></canvas>
+    </div>
+
+    <!-- NDCG@k Section -->
+    <div id="ndcgGraphContainer" style="display: none;" class="mt-5">
+        <h3>Interactive NDCG@k Graph</h3>
+        <table class="table table-bordered score-table">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>NDCG@1</th>
+                    <th>NDCG@5</th>
+                    <th>NDCG@10</th>
+                    <th>NDCG@20</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for model, values in formatted_ndcg_recursive_ranks.items %}
+                <tr>
+                    <td>{{ model }}</td>
+                    <td>{{ values.NDCG_at_1 }}</td>
+                    <td>{{ values.NDCG_at_5 }}</td>
+                    <td>{{ values.NDCG_at_10 }}</td>
+                    <td>{{ values.NDCG_at_20 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <canvas id="ndcgChart"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Dati dal server
+        const recallRanks = JSON.parse('{{ recall_ranks|safe|escapejs }}');
+        const precisionRanks = JSON.parse('{{ precision_ranks|safe|escapejs }}');
+        const mrrRanks = JSON.parse('{{ mrr_ranks|safe|escapejs }}');
+        const crRanks = JSON.parse('{{ cr_ranks|safe|escapejs }}');
+        const mrrRecursiveRanks = JSON.parse('{{ mrr_recursive_ranks|safe|escapejs }}');
+        const f1RecursiveRanks = JSON.parse('{{ f1_recursive_ranks|safe|escapejs }}');
+        const ndcgRecursiveRanks = JSON.parse('{{ ndcg_recursive_ranks|safe|escapejs }}');
+        const labels = Array.from({length: 20}, (_, i) => i + 1); // k da 1 a 20
+
+        // Funzione per generare un colore casuale
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        // Funzione per creare grafico
+        function createChart(containerId, chartId, data, title, yLabel, isBarChart = false) {
+            document.getElementById(containerId).style.display = 'block';
+
+            const datasets = isBarChart
+                ? Object.entries(data).map(([model, value]) => ({
+                    label: model,
+                    data: [value],
+                    backgroundColor: getRandomColor(),
+                    borderWidth: 1,
+                }))
+                : Object.entries(data).map(([model, ranks]) => ({
+                    label: `${model} ${title}`,
+                    data: ranks,
+                    borderColor: getRandomColor(),
+                    backgroundColor: "rgba(0, 0, 0, 0)",
+                    borderWidth: 2,
+                    tension: 0.4,
+                }));
+
+            const config = {
+                type: isBarChart ? 'bar' : 'line',
+                data: {
+                    labels: isBarChart ? Object.keys(data) : labels,
+                    datasets: datasets,
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: `${title} for Different Models`,
+                        },
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: isBarChart ? 'Models' : 'k',
+                            },
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: yLabel,
+                            },
+                            min: 0,
+                            max: 1,
+                        },
+                    },
+                },
+            };
+            const ctx = document.getElementById(chartId).getContext('2d');
+            new Chart(ctx, config);
+        }
+
+        // Funzione per creare un grafico dinamico
+        function createDynamicChart(containerId, chartId, data, title, yLabel) {
+            document.getElementById(containerId).style.display = 'block';
+
+            const datasets = Object.entries(data).map(([model, ranks]) => ({
+                label: `${model} ${title}`,
+                data: ranks,
+                borderColor: getRandomColor(),
+                backgroundColor: "rgba(0, 0, 0, 0)",
+                borderWidth: 2,
+                tension: 0.4,
+            }));
+
+            const config = {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets,
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: `${title} for Different Models`,
+                        },
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'k',
+                            },
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: yLabel,
+                            },
+                            beginAtZero: false, // Permetti valori fuori dall'intervallo 0-1
+                        },
+                    },
+                },
+            };
+            const ctx = document.getElementById(chartId).getContext('2d');
+            new Chart(ctx, config);
+        }
+
+        // Mostra grafici se ci sono dati
+        if (Object.keys(recallRanks).length > 0) {
+            createChart('recallGraphContainer', 'recallChart', recallRanks, 'Recall@k', 'Recall');
+        }
+        if (Object.keys(precisionRanks).length > 0) {
+            createChart('precisionGraphContainer', 'precisionChart', precisionRanks, 'Precision@k', 'Precision');
+        }
+        if (Object.keys(mrrRecursiveRanks).length > 0) {
+            createChart('mrrRecursiveGraphContainer', 'mrrRecursiveChart', mrrRecursiveRanks, 'MRR@k', 'MRR');
+        }
+        if (Object.keys(f1RecursiveRanks).length > 0) {
+            createDynamicChart('f1GraphContainer', 'f1Chart', f1RecursiveRanks, 'F1@k', 'F1 Score');
+        }
+        if (Object.keys(ndcgRecursiveRanks).length > 0) {
+            createDynamicChart('ndcgGraphContainer', 'ndcgChart', ndcgRecursiveRanks, 'NDCG@k', 'NDCG');
+        }
+        if (Object.keys(mrrRanks).length > 0) {
+            document.getElementById('mrrGraphContainer').style.display = 'block';
+    
+            const labels = Object.keys(mrrRanks); // Modelli
+            const data = Object.values(mrrRanks); // Valori MRR
+            const backgroundColors = ['#8e44ad', '#e74c3c', '#3498db', '#2ecc71', '#f1c40f']; // Colori distinti
+    
+            // Configurazione del grafico
+            const config = {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'MRR Values',
+                        data: data,
+                        backgroundColor: backgroundColors.slice(0, labels.length), // Associa un colore a ogni modello
+                        borderColor: backgroundColors.slice(0, labels.length), // Bordo dello stesso colore
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        title: {
+                            display: true,
+                            text: 'MRR for Different Models'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Models'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'MRR Value'
+                            },
+                            min: 0,
+                            max: 1
+                        }
+                    }
+                }
+            };
+    
+            const ctx = document.getElementById('mrrChart').getContext('2d');
+            new Chart(ctx, config);
+        }
+
+        if (Object.keys(crRanks).length > 0) {
+            document.getElementById('crGraphContainer').style.display = 'block';
+    
+            const labels = Object.keys(crRanks); // Modelli
+            const data = Object.values(crRanks); // Valori MRR
+            const backgroundColors = ['#8e44ad', '#e74c3c', '#3498db', '#2ecc71', '#f1c40f']; // Colori distinti
+    
+            // Configurazione del grafico
+            const config = {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'CR Values',
+                        data: data,
+                        backgroundColor: backgroundColors.slice(0, labels.length), // Associa un colore a ogni modello
+                        borderColor: backgroundColors.slice(0, labels.length), // Bordo dello stesso colore
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        title: {
+                            display: true,
+                            text: 'CR for Different Models'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Models'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'CR Value'
+                            },
+                            ticks: {
+                                beginAtZero: true, // Inizia da 0
+                                callback: function(value) {
+                                    // Opzionale: Mostra i valori arrotondati (ad esempio, 2 decimali)
+                                    return value.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+    
+            const ctx = document.getElementById('crChart').getContext('2d');
+            new Chart(ctx, config);
+        }
+    });
+</script>
+{% endblock %}

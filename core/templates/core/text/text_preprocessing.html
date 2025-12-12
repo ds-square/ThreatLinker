@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .card-body {
+        padding: 20px; /* Assicura un padding uniforme */
+        overflow: hidden; /* Nasconde eventuali elementi fuori dal box */
+    }
+    
+    .options-container {
+        max-width: 100%; /* Forza la larghezza massima */
+        padding: 15px;
+        box-sizing: border-box;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Core</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Text Preprocessing</li>
+        </ol>
+    </nav>
+
+    <!-- Section Header Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="bi bi-tools text-primary" style="font-size: 2rem;"></i>
+                </div>
+                <div>
+                    <h2 class="card-title mb-1">Text Preprocessing Overview</h2>
+                    <p class="card-text text-muted">Enter a sentence and select preprocessing options to clean and format your text.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h3 class="card-title mb-4">Text Preprocessing</h3>
+            <form action="{% url 'core:text_preprocessing_results' %}" method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="sentence" class="form-label">Enter Sentence:</label>
+                    <textarea name="sentence" id="sentence" class="form-control" rows="3" required></textarea>
+                </div>
+    
+                <h4 class="mt-4">Preprocessing Options</h4>
+    
+                <div class="options-container">
+                    <!-- General Cleaning Options -->
+                    <h5 class="mt-3">General Cleaning</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="lowercase" name="lowercase" checked>
+                                <label class="form-check-label" for="lowercase">Convert to Lowercase</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remove_space_newline" name="remove_space_newline" checked>
+                                <label class="form-check-label" for="remove_space_newline">Remove Extra Spaces and Newlines</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remove_punctuation" name="remove_punctuation" checked>
+                                <label class="form-check-label" for="remove_punctuation">Remove Punctuation</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remove_digits" name="remove_digits">
+                                <label class="form-check-label" for="remove_digits">Remove Digits</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remove_links" name="remove_links">
+                                <label class="form-check-label" for="remove_links">Remove Links</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remove_dates" name="remove_dates">
+                                <label class="form-check-label" for="remove_dates">Remove Dates</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remove_special_characters" name="remove_special_characters">
+                                <label class="form-check-label" for="remove_special_characters">Remove Special Characters</label>
+                            </div>
+                        </div>
+                    </div>
+    
+                    <!-- File Cleaning Options -->
+                    <h5 class="mt-4">File Cleaning</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remove_file_names" name="remove_file_names">
+                                <label class="form-check-label" for="remove_file_names">Remove File Names</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remove_file_paths" name="remove_file_paths">
+                                <label class="form-check-label" for="remove_file_paths">Remove File Paths</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="replace_file_paths" name="replace_file_paths">
+                                <label class="form-checked-label" for="replace_file_paths">Replace File Paths with Placeholder</label>
+                            </div>
+                        </div>
+                    </div>
+    
+                    <!-- Language Processing Options -->
+                    <h5 class="mt-4">Language Processing</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="expand_contractions" name="expand_contractions" checked>
+                                <label class="form-check-label" for="expand_contractions">Expand Contractions</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="genitive" name="genitive">
+                                <label class="form-check-label" for="genitive">Convert Genitive (e.g., "John's" to "of John")</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remove_stop_words" name="remove_stop_words">
+                                <label class="form-check-label" for="remove_stop_words">Remove Stop Words</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="lemmatize" name="lemmatize">
+                                <label class="form-check-label" for="lemmatize">Lemmatize Text</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sentence_tokenization" name="sentence_tokenization">
+                                <label class="form-check-label" for="sentence_tokenization">Sentence Tokenization</label>
+                            </div>
+                        </div>
+                    </div>
+    
+                    <!-- Specific Software Cleaning Options -->
+                    <h5 class="mt-4">Specific Software Cleaning</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remove_entities" name="remove_entities">
+                                <label class="form-check-label" for="remove_entities">Remove Entity References (e.g., CVE, CWE)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remove_versions" name="remove_versions">
+                                <label class="form-check-label" for="remove_versions">Remove Version Information</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remove_products" name="remove_products">
+                                <label class="form-check-label" for="remove_products">Remove Product Information</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+    
+                <button type="submit" class="btn btn-primary mt-4">Preprocess</button>
+            </form>
+        </div>
+    </div>
+    
+    
+</div>
+{% endblock %}

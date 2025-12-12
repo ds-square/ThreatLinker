@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Core</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'core:tasks_list' %}">Task List</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Export GroundTruth Results</li>
+        </ol>
+    </nav>
+
+    <!-- Section Header Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="card-title mb-3">Export GroundTruth Results</h2>
+            <p class="card-text text-muted">Select a GroundTruth and the AI models to use for exporting results.</p>
+            <p class="card-text"><strong>Task:</strong> {{ task.name }}</p>
+        </div>
+    </div>
+
+    <!-- Form for Exporting GroundTruth Results -->
+    <form method="POST" action="">
+        {% csrf_token %}
+
+        <!-- Select GroundTruth -->
+        <div class="mb-4">
+            <label for="groundtruth" class="form-label">Select GroundTruth</label>
+            <select name="groundtruth" id="groundtruth" class="form-select" required>
+                {% for gt in groundtruths %}
+                <option value="{{ gt.id }}">{{ gt.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Number of CAPECs -->
+        <div class="mb-4">
+            <label for="top_count" class="form-label">Choose the TOP Rank you want to compare:</label>
+            <select name="top_count" id="top_count" class="form-select">
+                <option value="1">1</option>
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+            </select>
+        </div>
+
+        <!-- Select AI Models -->
+        <div class="mb-4">
+            <h5>Select AI Models</h5>
+            {% if task.ai_models %}
+            {% for model in task.ai_models %}
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="ai_models" id="ai_model_{{ model }}" value="{{ model }}">
+                <label class="form-check-label" for="ai_model_{{ model }}">{{ model }}</label>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="text-danger">No AI models available for this task.</p>
+            {% endif %}
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-success">Export Results</button>
+    </form>
+
+    <!-- Display Message -->
+    {% if message %}
+    <div class="alert alert-info mt-4">{{ message }}</div>
+    {% endif %}
+</div>
+{% endblock %}

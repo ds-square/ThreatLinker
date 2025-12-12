@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Core</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'core:tasks_list' %}">Task List</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'core:task_detail' task.id %}">Task Details</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Export Top CAPECs</li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="card-title mb-3">Export Top CAPECs</h2>
+            <p class="card-text text-muted">Select the number of CAPECs and the AI models for the export.</p>
+            {% if message %}
+            <div class="alert alert-info">{{ message }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Export Form -->
+    <form method="POST" action="{% url 'core:export_top_capecs' task.id %}">
+        {% csrf_token %}
+
+        <!-- Number of CAPECs -->
+        <div class="mb-4">
+            <label for="top_count" class="form-label">Number of CAPECs to Export</label>
+            <select name="top_count" id="top_count" class="form-select">
+                <option value="1">1</option>
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="50">50</option>
+            </select>
+        </div>
+
+        <!-- AI Models -->
+        <div class="mb-4">
+            <label class="form-label">AI Models to Use</label>
+            <div class="form-check">
+                {% for model in ai_models %}
+                <div>
+                    <input
+                        type="checkbox"
+                        name="ai_models"
+                        id="model_{{ model }}"
+                        value="{{ model }}"
+                        class="form-check-input"
+                    >
+                    <label for="model_{{ model }}" class="form-check-label">{{ model }}</label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-success">Export</button>
+    </form>
+</div>
+{% endblock %}

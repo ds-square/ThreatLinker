@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view:homepage' %}">Core</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'core:tasks_list' %}">Task List</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Task Details</li>
+        </ol>
+    </nav>
+
+    <!-- Section Header Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="card-title mb-3">Task Details</h2>
+            <p class="card-text text-muted">Details of the selected task including its CVEs and the analysis status.</p>
+            <p class="card-text text-muted">Notes: {{ task.notes }}</p>
+            <p class="card-text text-muted">Type: {{ task.type}} </p>
+            <p class="card-text text-muted">Created at: {{ task.created_at }}</p>
+            <p class="card-text text-muted">Updated at: {{ task.updated_at }}</p>
+            <p class="card-text text-muted">Related CVEs: {{ single_correlations_count }}</p>
+        </div>
+    </div>
+
+    <!-- Action Bar -->
+    {% if task.status == "complete" %}
+    <div class="table-responsive">
+        <div class="mb-4" style="background-color: #e9ecef; padding: 15px; border-radius: 5px; width: 100%;">
+            <div class="d-flex align-items-center gap-3">
+                <a href="{% url 'core:export_top_capecs' task.id %}" class="btn btn-primary">
+                    Export Top CAPECs
+                </a>
+                <a href="{% url 'core:export_groundtruth_results' task.id %}" class="btn btn-primary">
+                    Export GroundTruth Results
+                </a>
+                <a href="{% url 'graph:elaborate_graph_task' task.id %}" class="btn btn-primary">
+                    Process Graph Task
+                </a>
+                {% if task.type == "groundtruth" %}
+                <a href="{% url 'core:groundtruth_graphs' task.id %}" class="btn btn-primary">
+                    Show Graphics
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+
+    <!-- CVE Analysis Table -->
+    <div class="col-12 grid-margin stretch-card">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h4 class="card-title">Analyzed CVEs</h4>
+                {% for host, cves in hosts_with_cves.items %}
+                <h5>Host: {{ host }}</h5>
+                <table id="cveSummaryTable" class="table table-striped display responsive nowrap" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>CVE ID</th>
+                            <th>Description</th>
+                            <th>Similarity Score</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in cves %}
+                        <tr>
+                            <td>{{ item.correlation.cve_id }}</td>
+                            <td>
+                                {{ item.cve.description|truncatewords:10 }}
+                            </td>
+                            <td>{{ item.correlation.similarity_scores|length }} methods</td>
+                            <td>
+                                <a href="{% url 'core:single_correlation_detail' task.id item.correlation.cve_id %}" class="btn btn-info">
+                                    View Details
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+
+</div>
+{% endblock %}
